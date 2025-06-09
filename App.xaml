@@ -1,0 +1,42 @@
+﻿<?xml version = "1.0" encoding = "UTF-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:FG_Scada_2025"
+             xmlns:helpers="clr-namespace:FG_Scada_2025.Helpers"
+             x:Class="FG_Scada_2025.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Value Converters -->
+            <helpers:StringToBoolConverter x:Key="StringToBoolConverter" />
+            <helpers:SiteStatusToColorConverter x:Key="SiteStatusToColorConverter" />
+            <helpers:SiteStatusToTextConverter x:Key="SiteStatusToTextConverter" />
+            <helpers:BoolToConnectionColorConverter x:Key="BoolToConnectionColorConverter" />
+            <helpers:BoolToConnectionTextConverter x:Key="BoolToConnectionTextConverter" />
+            <helpers:SensorValueToPercentageConverter x:Key="SensorValueToPercentageConverter" />
+            <helpers:SensorValueToBarHeightConverter x:Key="SensorValueToBarHeightConverter" />
+            <helpers:SensorValueToBarColorConverter x:Key="SensorValueToBarColorConverter" />
+            <helpers:SensorStatusToBackgroundConverter x:Key="SensorStatusToBackgroundConverter" />
+            <helpers:BoolToRealTimeTextConverter x:Key="BoolToRealTimeTextConverter" />
+            <helpers:BoolToRealTimeColorConverter x:Key="BoolToRealTimeColorConverter" />
+            <helpers:AlarmLevelToMarginConverter x:Key="AlarmLevelToMarginConverter" />
+            <helpers:BoolToAlarmColorConverter x:Key="BoolToAlarmColorConverter" />
+            <helpers:BoolToAlarm2ColorConverter x:Key="BoolToAlarm2ColorConverter" />
+            <helpers:StatusToFaultColorConverter x:Key="StatusToFaultColorConverter" />
+            <helpers:SensorTypeToColorConverter x:Key="SensorTypeToColorConverter" />
+            <helpers:SensorTypeToLetterConverter x:Key="SensorTypeToLetterConverter" />
+            <helpers:SensorValueToBarWidthConverter x:Key="SensorValueToBarWidthConverter" />
+            <helpers:AlarmPriorityToColorConverter x:Key="AlarmPriorityToColorConverter" />
+            <helpers:AlarmTypeToTextConverter x:Key="AlarmTypeToTextConverter" />
+            <helpers:AlarmTypeToColorConverter x:Key="AlarmTypeToColorConverter" />
+            <helpers:BoolToActiveTextConverter x:Key="BoolToActiveTextConverter" />
+            <helpers:BoolToActiveColorConverter x:Key="BoolToActiveColorConverter" />
+            <helpers:AlarmDurationConverter x:Key="AlarmDurationConverter" />
+
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

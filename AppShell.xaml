@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="FG_Scada_2025.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:FG_Scada_2025.Views"
+    Title="FG_Scada_2025">
+
+    <ShellContent
+        Title="Login"
+        ContentTemplate="{DataTemplate local:LoginPage}"
+        Route="LoginPage" />
+
+    <ShellContent
+        Title="Romania Map"
+        ContentTemplate="{DataTemplate local:RomaniaMapPage}"
+        Route="RomaniaMapPage" />
+    
+    <ShellContent
+        Title="Site"
+        ContentTemplate="{DataTemplate local:SitePage}"
+        Route="SitePage" />
+    
+    <ShellContent
+        Title="Sensors"
+        ContentTemplate="{DataTemplate local:SensorsPage}"
+        Route="SensorsPage" />
+    
+    <ShellContent
+        Title="Alarm History"
+        ContentTemplate="{DataTemplate local:AlarmHistoryPage}"
+        Route="AlarmHistoryPage" />
+
+</Shell>

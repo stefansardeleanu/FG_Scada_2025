@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FG_Scada_2025.Views.SitePage"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                BackgroundColor="#2c3e50" 
+                Padding="15,10">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                <Button Grid.Column="0"
+                        Text="← Back"
+                        Command="{Binding BackCommand}"
+                        BackgroundColor="#3498db"
+                        TextColor="White"
+                        FontSize="14"
+                        HeightRequest="35"
+                        WidthRequest="80"
+                        CornerRadius="5"/>
+
+                <StackLayout Grid.Column="1" 
+                           Orientation="Vertical"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"
+                           Spacing="2">
+                    <Label Text="{Binding SiteDisplayName}"
+                           TextColor="White"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"/>
+                    <Label Text="{Binding CountyName, StringFormat='({0} County)'}"
+                           TextColor="#bdc3c7"
+                           FontSize="12"
+                           HorizontalOptions="Center"/>
+                </StackLayout>
+
+                <Button Grid.Column="2"
+                        Text="Refresh"
+                        Command="{Binding RefreshCommand}"
+                        BackgroundColor="#27ae60"
+                        TextColor="White"
+                        FontSize="14"
+                        HeightRequest="35"
+                        WidthRequest="80"
+                        CornerRadius="5"
+                        Margin="0,0,10,0"/>
+
+                <ActivityIndicator Grid.Column="3"
+                                 IsRunning="{Binding IsBusy}"
+                                 IsVisible="{Binding IsBusy}"
+                                 Color="White"
+                                 WidthRequest="25"
+                                 HeightRequest="25"/>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <ScrollView Grid.Row="1" Padding="20">
+            <StackLayout Spacing="25">
+
+                <!-- Site Status Card -->
+                <Border BackgroundColor="White"
+                        StrokeThickness="1"
+                        Stroke="#dee2e6"
+                        StrokeShape="RoundRectangle 15"
+                        Padding="20">
+
+                    <Border.Shadow>
+                        <Shadow Brush="Black" Opacity="0.1" Radius="8" Offset="0,3"/>
+                    </Border.Shadow>
+
+                    <StackLayout Spacing="15">
+                        <Label Text="Site Status"
+                               FontSize="20"
+                               FontAttributes="Bold"
+                               TextColor="#2c3e50"
+                               HorizontalOptions="Center"/>
+
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="20" RowSpacing="15">
+
+                            <!-- Overall Status -->
+                            <Label Grid.Row="0" Grid.Column="0"
+                                   Text="Overall Status:"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center"/>
+                            <Border Grid.Row="0" Grid.Column="1"
+                                    BackgroundColor="{Binding Site.Status, Converter={StaticResource SiteStatusToColorConverter}}"
+                                    Padding="10,5"
+                                    StrokeShape="RoundRectangle 5"
+                                    HorizontalOptions="Start">
+                                <Label Text="{Binding Site.Status, Converter={StaticResource SiteStatusToTextConverter}}"
+                                       TextColor="White"
+                                       FontSize="12"
+                                       FontAttributes="Bold"/>
+                            </Border>
+
+                            <!-- Connection Status -->
+                            <Label Grid.Row="1" Grid.Column="0"
+                                   Text="PLC Connection:"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center"/>
+                            <StackLayout Grid.Row="1" Grid.Column="1"
+                                       Orientation="Horizontal"
+                                       Spacing="8">
+                                <Ellipse Fill="{Binding Site.PlcConnection.IsConnected, Converter={StaticResource BoolToConnectionColorConverter}}"
+                                         WidthRequest="12"
+                                         HeightRequest="12"
+                                         VerticalOptions="Center"/>
+                                <Label Text="{Binding ConnectionStatus}"
+                                       FontSize="14"
+                                       VerticalOptions="Center"/>
+                            </StackLayout>
+
+                            <!-- Last Update -->
+                            <Label Grid.Row="2" Grid.Column="0"
+                                   Text="Last Update:"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center"/>
+                            <Label Grid.Row="2" Grid.Column="1"
+                                   Text="{Binding LastUpdate}"
+                                   FontSize="14"
+                                   VerticalOptions="Center"/>
+
+                        </Grid>
+                    </StackLayout>
+                </Border>
+
+                <!-- Site Information Card -->
+                <Border BackgroundColor="White"
+                        StrokeThickness="1"
+                        Stroke="#dee2e6"
+                        StrokeShape="RoundRectangle 15"
+                        Padding="20">
+
+                    <Border.Shadow>
+                        <Shadow Brush="Black" Opacity="0.1" Radius="8" Offset="0,3"/>
+                    </Border.Shadow>
+
+                    <StackLayout Spacing="15">
+                        <Label Text="Site Information"
+                               FontSize="20"
+                               FontAttributes="Bold"
+                               TextColor="#2c3e50"
+                               HorizontalOptions="Center"/>
+
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="20" RowSpacing="10">
+
+                            <Label Grid.Row="0" Grid.Column="0"
+                                   Text="Site ID:"
+                                   FontSize="14"
+                                   FontAttributes="Bold"/>
+                            <Label Grid.Row="0" Grid.Column="1"
+                                   Text="{Binding SiteId}"
+                                   FontSize="14"/>
+
+                            <Label Grid.Row="1" Grid.Column="0"
+                                   Text="Total Sensors:"
+                                   FontSize="14"
+                                   FontAttributes="Bold"/>
+                            <Label Grid.Row="1" Grid.Column="1"
+                                   Text="{Binding Site.Sensors.Count}"
+                                   FontSize="14"/>
+
+                            <Label Grid.Row="2" Grid.Column="0"
+                                   Text="PLC Address:"
+                                   FontSize="14"
+                                   FontAttributes="Bold"/>
+                            <Label Grid.Row="2" Grid.Column="1"
+                                   Text="{Binding Site.PlcConnection.IpAddress}"
+                                   FontSize="14"/>
+
+                            <Label Grid.Row="3" Grid.Column="0"
+                                   Text="Protocol:"
+                                   FontSize="14"
+                                   FontAttributes="Bold"/>
+                            <Label Grid.Row="3" Grid.Column="1"
+                                   Text="{Binding Site.PlcConnection.Protocol}"
+                                   FontSize="14"/>
+
+                        </Grid>
+                    </StackLayout>
+                </Border>
+
+                <!-- Quick Actions -->
+                <StackLayout Spacing="15">
+                    <Label Text="Quick Actions"
+                           FontSize="20"
+                           FontAttributes="Bold"
+                           TextColor="#2c3e50"
+                           HorizontalOptions="Center"/>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="15">
+
+                        <!-- View Sensors Button -->
+                        <Border Grid.Column="0"
+                                BackgroundColor="#3498db"
+                                StrokeShape="RoundRectangle 15"
+                                Padding="0"
+                                HeightRequest="120">
+
+                            <Border.Shadow>
+                                <Shadow Brush="Black" Opacity="0.2" Radius="8" Offset="0,3"/>
+                            </Border.Shadow>
+
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ViewSensorsCommand}"/>
+                            </Border.GestureRecognizers>
+
+                            <StackLayout Spacing="10" 
+                                       HorizontalOptions="Center" 
+                                       VerticalOptions="Center">
+                                <Label Text="📊"
+                                       FontSize="32"
+                                       HorizontalOptions="Center"/>
+                                <Label Text="View Sensors"
+                                       TextColor="White"
+                                       FontSize="16"
+                                       FontAttributes="Bold"
+                                       HorizontalOptions="Center"/>
+                                <Label Text="Real-time Data"
+                                       TextColor="#ecf0f1"
+                                       FontSize="12"
+                                       HorizontalOptions="Center"/>
+                            </StackLayout>
+                        </Border>
+
+                        <!-- View Alarms Button -->
+                        <Border Grid.Column="1"
+                                BackgroundColor="#e74c3c"
+                                StrokeShape="RoundRectangle 15"
+                                Padding="0"
+                                HeightRequest="120">
+
+                            <Border.Shadow>
+                                <Shadow Brush="Black" Opacity="0.2" Radius="8" Offset="0,3"/>
+                            </Border.Shadow>
+
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ViewAlarmsCommand}"/>
+                            </Border.GestureRecognizers>
+
+                            <StackLayout Spacing="10" 
+                                       HorizontalOptions="Center" 
+                                       VerticalOptions="Center">
+                                <Label Text="🚨"
+                                       FontSize="32"
+                                       HorizontalOptions="Center"/>
+                                <Label Text="Alarm History"
+                                       TextColor="White"
+                                       FontSize="16"
+                                       FontAttributes="Bold"
+                                       HorizontalOptions="Center"/>
+                                <Label Text="View Events"
+                                       TextColor="#ecf0f1"
+                                       FontSize="12"
+                                       HorizontalOptions="Center"/>
+                            </StackLayout>
+                        </Border>
+
+                    </Grid>
+                </StackLayout>
+
+            </StackLayout>
+        </ScrollView>
+
+    </Grid>
+</ContentPage>

@@ -1,0 +1,43 @@
+{
+  "counties": [
+    {
+      "id": "ROGJ",
+      "name": "Gorj",
+      "displayName": "Gorj County",
+      "svgPath": "",
+      "mapFilePath": "",
+      "position": {
+        "centerX": 0,
+        "centerY": 0,
+        "width": 0,
+        "height": 0
+      },
+      "sites": [
+        {
+          "id": "PanouHurezani",
+          "name": "PanouHurezani",
+          "displayName": "Panou Hurezani Station",
+          "countyId": "ROGJ",
+          "sensors": [],
+          "position": {
+            "x": 150,
+            "y": 120
+          },
+          "plcConnection": {
+            "ipAddress": "192.168.1.100",
+            "port": 1883,
+            "protocol": "MQTT",
+            "topic": "scada/panou_hurezani",
+            "isConnected": false,
+            "lastUpdate": "2025-01-01T00:00:00"
+          },
+          "status": {
+            "hasAlarm": false,
+            "hasFault": false,
+            "lastUpdate": "2025-01-01T00:00:00"
+          }
+        }
+      ]
+    }
+  ]
+}

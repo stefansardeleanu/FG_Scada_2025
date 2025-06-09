@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:helpers="clr-namespace:FG_Scada_2025.Helpers"
+             x:Class="FG_Scada_2025.Views.AlarmHistoryPage"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                BackgroundColor="#2c3e50" 
+                Padding="15,10">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                <Button Grid.Column="0"
+                        Text="← Back"
+                        Command="{Binding BackCommand}"
+                        BackgroundColor="#3498db"
+                        TextColor="White"
+                        FontSize="14"
+                        HeightRequest="35"
+                        WidthRequest="80"
+                        CornerRadius="5"/>
+
+                <StackLayout Grid.Column="1" 
+                           Orientation="Vertical"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"
+                           Spacing="2">
+                    <Label Text="{Binding SiteDisplayName}"
+                           TextColor="White"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"/>
+                    <Label Text="Alarm History"
+                           TextColor="#bdc3c7"
+                           FontSize="12"
+                           HorizontalOptions="Center"/>
+                </StackLayout>
+
+                <Button Grid.Column="2"
+                        Text="Refresh"
+                        Command="{Binding RefreshCommand}"
+                        BackgroundColor="#27ae60"
+                        TextColor="White"
+                        FontSize="14"
+                        HeightRequest="35"
+                        WidthRequest="80"
+                        CornerRadius="5"
+                        Margin="0,0,10,0"/>
+
+                <ActivityIndicator Grid.Column="3"
+                                 IsRunning="{Binding IsBusy}"
+                                 IsVisible="{Binding IsBusy}"
+                                 Color="White"
+                                 WidthRequest="25"
+                                 HeightRequest="25"/>
+            </Grid>
+        </Border>
+
+        <!-- Alarm Summary -->
+        <Border Grid.Row="1" 
+                BackgroundColor="#34495e" 
+                Padding="15,8">
+            <Label Text="{Binding AlarmSummary}"
+                   TextColor="White"
+                   FontSize="14"
+                   HorizontalOptions="Center"/>
+        </Border>
+
+        <!-- Filters Section -->
+        <Border Grid.Row="2" 
+                BackgroundColor="#ecf0f1" 
+                Padding="15,10">
+            <StackLayout Spacing="10">
+
+                <!-- Search and Clear Row -->
+                <Grid ColumnDefinitions="*,Auto,Auto">
+                    <Entry Grid.Column="0"
+                           Text="{Binding SearchText}"
+                           Placeholder="Search alarms..."
+                           BackgroundColor="White"
+                           FontSize="14"/>
+
+                    <Button Grid.Column="1"
+                            Text="Clear"
+                            Command="{Binding ClearFiltersCommand}"
+                            BackgroundColor="#95a5a6"
+                            TextColor="White"
+                            FontSize="12"
+                            HeightRequest="35"
+                            WidthRequest="60"
+                            CornerRadius="5"
+                            Margin="10,0,0,0"/>
+                </Grid>
+
+                <!-- Filter Options Row -->
+                <Grid ColumnDefinitions="*,Auto">
+                    <Picker Grid.Column="0"
+                            ItemsSource="{Binding AlarmTypes}"
+                            SelectedItem="{Binding SelectedAlarmTypeItem}"
+                            ItemDisplayBinding="{Binding Name}"
+                            Title="Filter by Type"
+                            BackgroundColor="White"
+                            FontSize="14"/>
+
+                    <CheckBox Grid.Column="1"
+                              IsChecked="{Binding ShowActiveOnly}"
+                              VerticalOptions="End"
+                              Margin="15,0,0,0"/>
+                    <Label Grid.Column="1"
+                           Text="Active Only"
+                           VerticalOptions="Center"
+                           FontSize="14"
+                           Margin="40,0,0,0"/>
+                </Grid>
+            </StackLayout>
+        </Border>
+
+        <!-- Alarms List -->
+        <ScrollView Grid.Row="3" Padding="15">
+            <CollectionView ItemsSource="{Binding FilteredAlarms}"
+                            SelectionMode="None"
+                            ItemSizingStrategy="MeasureAllItems">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Vertical" 
+                                     ItemSpacing="8"/>
+                </CollectionView.ItemsLayout>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <!-- Alarm Item Card -->
+                        <Border BackgroundColor="White"
+                                StrokeThickness="1"
+                                Stroke="#dee2e6"
+                                StrokeShape="RoundRectangle 8"
+                                Padding="12">
+
+                            <Border.Shadow>
+                                <Shadow Brush="Black" Opacity="0.1" Radius="4" Offset="0,2"/>
+                            </Border.Shadow>
+
+                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto">
+
+                                <!-- Priority Indicator -->
+                                <Border Grid.Row="0" Grid.Column="0" Grid.RowSpan="3"
+                                        BackgroundColor="{Binding Priority, Converter={StaticResource AlarmPriorityToColorConverter}}"
+                                        WidthRequest="4"
+                                        Margin="0,0,12,0"/>
+
+                                <!-- Header Row -->
+                                <Grid Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" 
+                                      ColumnDefinitions="Auto,*,Auto,Auto">
+
+                                    <Label Grid.Column="0"
+                                           Text="{Binding SensorId}"
+                                           FontSize="16"
+                                           FontAttributes="Bold"
+                                           TextColor="#2c3e50"
+                                           VerticalOptions="Center"/>
+
+                                    <Border Grid.Column="2"
+                                            BackgroundColor="{Binding Type, Converter={StaticResource AlarmTypeToColorConverter}}"
+                                            Padding="6,2"
+                                            StrokeShape="RoundRectangle 4"
+                                            StrokeThickness="0"
+                                            Margin="10,0">
+                                        <Label Text="{Binding Type, Converter={StaticResource AlarmTypeToTextConverter}}"
+                                               FontSize="10"
+                                               FontAttributes="Bold"
+                                               TextColor="White"/>
+                                    </Border>
+
+                                    <Border Grid.Column="3"
+                                            BackgroundColor="{Binding IsActive, Converter={StaticResource BoolToActiveColorConverter}}"
+                                            Padding="6,2"
+                                            StrokeShape="RoundRectangle 4"
+                                            StrokeThickness="0">
+                                        <Label Text="{Binding IsActive, Converter={StaticResource BoolToActiveTextConverter}}"
+                                               FontSize="10"
+                                               FontAttributes="Bold"
+                                               TextColor="White"/>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Message Row -->
+                                <Label Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                       Text="{Binding Message}"
+                                       FontSize="14"
+                                       TextColor="#495057"
+                                       Margin="0,4,0,0"/>
+
+                                <!-- Details Row -->
+                                <Grid Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                                      ColumnDefinitions="Auto,Auto,*,Auto"
+                                      Margin="0,8,0,0">
+
+                                    <Label Grid.Column="0"
+                                           Text="{Binding StartTime, StringFormat='{0:MMM dd, HH:mm}'}"
+                                           FontSize="12"
+                                           TextColor="#6c757d"/>
+
+                                    <Label Grid.Column="1"
+                                           Text="{Binding Value, StringFormat='Value: {0:F1}'}"
+                                           FontSize="12"
+                                           TextColor="#6c757d"
+                                           Margin="20,0,0,0"/>
+
+                                    <Label Grid.Column="3"
+                                           Text="{Binding ., Converter={StaticResource AlarmDurationConverter}}"
+                                           FontSize="12"
+                                           FontAttributes="Bold"
+                                           TextColor="#495057"/>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+                <CollectionView.EmptyView>
+                    <StackLayout HorizontalOptions="Center" 
+                               VerticalOptions="Center"
+                               Spacing="10"
+                               Margin="0,50,0,0">
+                        <Label Text="🔍"
+                               FontSize="48"
+                               HorizontalOptions="Center"/>
+                        <Label Text="No alarms found"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="#7f8c8d"
+                               HorizontalOptions="Center"/>
+                        <Label Text="Try adjusting your search filters"
+                               FontSize="14"
+                               TextColor="#95a5a6"
+                               HorizontalOptions="Center"/>
+                    </StackLayout>
+                </CollectionView.EmptyView>
+            </CollectionView>
+        </ScrollView>
+
+    </Grid>
+</ContentPage>

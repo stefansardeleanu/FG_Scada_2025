@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:helpers="clr-namespace:FG_Scada_2025.Helpers"
+             x:Class="FG_Scada_2025.Views.SensorsPage"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                BackgroundColor="#2c3e50" 
+                Padding="15,10">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                <Button Grid.Column="0"
+                        Text="← Back"
+                        Command="{Binding BackCommand}"
+                        BackgroundColor="#3498db"
+                        TextColor="White"
+                        FontSize="14"
+                        HeightRequest="35"
+                        WidthRequest="80"
+                        CornerRadius="5"/>
+
+                <StackLayout Grid.Column="1" 
+                           Orientation="Vertical"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"
+                           Spacing="2">
+                    <Label Text="{Binding SiteDisplayName}"
+                           TextColor="White"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"/>
+                    <Label Text="Real-time Sensor Data"
+                           TextColor="#bdc3c7"
+                           FontSize="12"
+                           HorizontalOptions="Center"/>
+                </StackLayout>
+
+                <Button Grid.Column="2"
+                        Text="{Binding IsRealTimeEnabled, Converter={StaticResource BoolToRealTimeTextConverter}}"
+                        Command="{Binding ToggleRealTimeCommand}"
+                        BackgroundColor="{Binding IsRealTimeEnabled, Converter={StaticResource BoolToRealTimeColorConverter}}"
+                        TextColor="White"
+                        FontSize="12"
+                        HeightRequest="35"
+                        WidthRequest="90"
+                        CornerRadius="5"
+                        Margin="0,0,10,0"/>
+
+                <Button Grid.Column="3"
+                        Text="Refresh"
+                        Command="{Binding RefreshCommand}"
+                        BackgroundColor="#27ae60"
+                        TextColor="White"
+                        FontSize="14"
+                        HeightRequest="35"
+                        WidthRequest="80"
+                        CornerRadius="5"
+                        Margin="0,0,10,0"/>
+
+                <ActivityIndicator Grid.Column="4"
+                                 IsRunning="{Binding IsBusy}"
+                                 IsVisible="{Binding IsBusy}"
+                                 Color="White"
+                                 WidthRequest="25"
+                                 HeightRequest="25"/>
+            </Grid>
+        </Border>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="1" 
+                BackgroundColor="#34495e" 
+                Padding="15,8">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Label Grid.Column="0"
+                       Text="{Binding Sensors.Count, StringFormat='Sensors: {0}'}"
+                       TextColor="White"
+                       FontSize="14"
+                       VerticalOptions="Center"/>
+
+                <Label Grid.Column="2"
+                       Text="{Binding LastUpdate, StringFormat='Last Update: {0}'}"
+                       TextColor="#bdc3c7"
+                       FontSize="12"
+                       VerticalOptions="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- Responsive Sensors List -->
+        <ScrollView Grid.Row="2" Padding="16">
+            <CollectionView ItemsSource="{Binding Sensors}"
+                            SelectionMode="None"
+                            ItemSizingStrategy="MeasureAllItems">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Vertical" 
+                                     ItemSpacing="0"/>
+                </CollectionView.ItemsLayout>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <!-- Responsive HMI-Style Sensor Faceplate Card -->
+                        <Border BackgroundColor="White"
+                                StrokeThickness="2"
+                                Stroke="#2c3e50"
+                                StrokeShape="RoundRectangle 12"
+                                Padding="12"
+                                Margin="0,0,0,12">
+
+                            <Border.Shadow>
+                                <Shadow Brush="Black" Opacity="0.15" Radius="6" Offset="0,2"/>
+                            </Border.Shadow>
+
+                            <!-- Main Horizontal Container -->
+                            <StackLayout Orientation="Horizontal" Spacing="12">
+
+                                <!-- Left Group: Status + Tag + Unit -->
+                                <StackLayout Spacing="4" WidthRequest="110">
+
+                                    <!-- Status Indicators Group (W A F) -->
+                                    <Border BackgroundColor="#f8f9fa"
+                                            StrokeThickness="1"
+                                            Stroke="#dee2e6"
+                                            StrokeShape="RoundRectangle 6"
+                                            Padding="4">
+                                        <StackLayout Orientation="Horizontal" Spacing="2">
+                                            <!-- Warning (W) -->
+                                            <Border BackgroundColor="{Binding Alarms.IsAlarmLevel1Active, Converter={StaticResource BoolToAlarmColorConverter}}"
+                                                    StrokeThickness="1"
+                                                    Stroke="#333"
+                                                    StrokeShape="RoundRectangle 4"
+                                                    WidthRequest="32"
+                                                    HeightRequest="22">
+                                                <Label Text="W"
+                                                       FontSize="11"
+                                                       FontAttributes="Bold"
+                                                       TextColor="White"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center"/>
+                                            </Border>
+
+                                            <!-- Alarm (A) -->
+                                            <Border BackgroundColor="{Binding Alarms.IsAlarmLevel2Active, Converter={StaticResource BoolToAlarm2ColorConverter}}"
+                                                    StrokeThickness="1"
+                                                    Stroke="#333"
+                                                    StrokeShape="RoundRectangle 4"
+                                                    WidthRequest="32"
+                                                    HeightRequest="22">
+                                                <Label Text="A"
+                                                       FontSize="11"
+                                                       FontAttributes="Bold"
+                                                       TextColor="White"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center"/>
+                                            </Border>
+
+                                            <!-- Fault (F) -->
+                                            <Border BackgroundColor="{Binding CurrentValue.Status, Converter={StaticResource StatusToFaultColorConverter}}"
+                                                    StrokeThickness="1"
+                                                    Stroke="#333"
+                                                    StrokeShape="RoundRectangle 4"
+                                                    WidthRequest="32"
+                                                    HeightRequest="22">
+                                                <Label Text="F"
+                                                       FontSize="11"
+                                                       FontAttributes="Bold"
+                                                       TextColor="White"
+                                                       HorizontalOptions="Center"
+                                                       VerticalOptions="Center"/>
+                                            </Border>
+                                        </StackLayout>
+                                    </Border>
+
+                                    <!-- Sensor Tag Group -->
+                                    <Border BackgroundColor="#f8f9fa"
+                                            StrokeThickness="1"
+                                            Stroke="#dee2e6"
+                                            StrokeShape="RoundRectangle 6"
+                                            Padding="8,6">
+                                        <Label Text="{Binding Tag}"
+                                               FontSize="14"
+                                               FontAttributes="Bold"
+                                               TextColor="#2c3e50"
+                                               HorizontalOptions="Center"
+                                               LineBreakMode="TailTruncation"/>
+                                    </Border>
+
+                                    <!-- Unit Group -->
+                                    <Border BackgroundColor="#fff5f5"
+                                            StrokeThickness="1"
+                                            Stroke="#fed7d7"
+                                            StrokeShape="RoundRectangle 6"
+                                            Padding="8,4">
+                                        <Label Text="{Binding CurrentValue.Unit}"
+                                               FontSize="12"
+                                               FontAttributes="Bold"
+                                               TextColor="#e53e3e"
+                                               HorizontalOptions="Center"/>
+                                    </Border>
+                                </StackLayout>
+
+                                <!-- Center Group: Digital Value Display -->
+                                <Border BackgroundColor="Black"
+                                        StrokeThickness="2"
+                                        Stroke="#333"
+                                        StrokeShape="RoundRectangle 8"
+                                        WidthRequest="90"
+                                        HeightRequest="100"
+                                        VerticalOptions="Center">
+                                    <StackLayout Spacing="2" VerticalOptions="Center">
+                                        <Label Text="{Binding CurrentValue.ProcessValue, StringFormat='{0:F1}'}"
+                                               FontSize="22"
+                                               FontAttributes="Bold"
+                                               TextColor="#00ff41"
+                                               HorizontalOptions="Center"
+                                               FontFamily="Consolas"/>
+                                        <Border HeightRequest="1" 
+                                               BackgroundColor="#00ff41" 
+                                               WidthRequest="60" 
+                                               HorizontalOptions="Center"
+                                               StrokeThickness="0"/>
+                                    </StackLayout>
+                                </Border>
+
+                                <!-- Right Group: Bargraph + Sensor Type (Inline) -->
+                                <StackLayout HorizontalOptions="FillAndExpand" Spacing="8">
+
+                                    <!-- Bargraph + Sensor Type Container (Horizontal) -->
+                                    <StackLayout Orientation="Horizontal" Spacing="12" VerticalOptions="Center">
+
+                                        <!-- Horizontal Bargraph Group -->
+                                        <Border BackgroundColor="#f8f9fa"
+                                                StrokeThickness="1"
+                                                Stroke="#dee2e6"
+                                                StrokeShape="RoundRectangle 6"
+                                                Padding="12,8"
+                                                HeightRequest="50"
+                                                HorizontalOptions="FillAndExpand">
+
+                                            <StackLayout Spacing="4">
+                                                <!-- Scale Labels -->
+                                                <Grid ColumnDefinitions="*,*,*,*,*" HeightRequest="12">
+                                                    <Label Grid.Column="0" Text="0" FontSize="9" TextColor="#666" HorizontalOptions="Start"/>
+                                                    <Label Grid.Column="1" Text="25" FontSize="9" TextColor="#666" HorizontalOptions="Center"/>
+                                                    <Label Grid.Column="2" Text="50" FontSize="9" TextColor="#666" HorizontalOptions="Center"/>
+                                                    <Label Grid.Column="3" Text="75" FontSize="9" TextColor="#666" HorizontalOptions="Center"/>
+                                                    <Label Grid.Column="4" Text="100" FontSize="9" TextColor="#666" HorizontalOptions="End"/>
+                                                </Grid>
+
+                                                <!-- Bargraph Container -->
+                                                <Grid HeightRequest="20">
+                                                    <!-- Background Bar -->
+                                                    <Border BackgroundColor="#e2e8f0"
+                                                           HeightRequest="20"
+                                                           HorizontalOptions="Fill"
+                                                           StrokeShape="RoundRectangle 10"
+                                                           StrokeThickness="0"/>
+
+                                                    <!-- Value Bar -->
+                                                    <Border BackgroundColor="{Binding ., Converter={StaticResource SensorValueToBarColorConverter}}"
+                                                           HeightRequest="20"
+                                                           WidthRequest="{Binding ., Converter={StaticResource SensorValueToBarWidthConverter}}"
+                                                           HorizontalOptions="Start"
+                                                           StrokeShape="RoundRectangle 10"
+                                                           StrokeThickness="0"/>
+                                                </Grid>
+                                            </StackLayout>
+                                        </Border>
+
+                                        <!-- Sensor Type Indicator (Inline) -->
+                                        <Border BackgroundColor="{Binding Type, Converter={StaticResource SensorTypeToColorConverter}}"
+                                                StrokeThickness="2"
+                                                Stroke="#333"
+                                                StrokeShape="RoundRectangle 8"
+                                                WidthRequest="100"
+                                                HeightRequest="100">
+                                            <Label Text="{Binding Type, Converter={StaticResource SensorTypeToLetterConverter}}"
+                                                   FontSize="20"
+                                                   FontAttributes="Bold"
+                                                   TextColor="White"
+                                                   HorizontalOptions="Center"
+                                                   VerticalOptions="Center"/>
+                                        </Border>
+                                    </StackLayout>
+
+                                </StackLayout>
+
+                            </StackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </ScrollView>
+
+    </Grid>
+</ContentPage>
