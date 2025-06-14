@@ -31,4 +31,9 @@
         ContentTemplate="{DataTemplate local:AlarmHistoryPage}"
         Route="AlarmHistoryPage" />
 
+    <ShellContent
+    Title="Connection Test"
+    ContentTemplate="{DataTemplate local:ConnectionTestPage}"
+    Route="ConnectionTestPage" />
+
 </Shell>

@@ -10,6 +10,7 @@
             Routing.RegisterRoute("SitePage", typeof(Views.SitePage));
             Routing.RegisterRoute("SensorsPage", typeof(Views.SensorsPage));
             Routing.RegisterRoute("AlarmHistoryPage", typeof(Views.AlarmHistoryPage));
+            Routing.RegisterRoute("ConnectionTestPage", typeof(Views.ConnectionTestPage));
         }
     }
 

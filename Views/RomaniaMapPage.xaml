@@ -79,6 +79,12 @@
                            VerticalOptions="Center" 
                            FontSize="12"/>
                 </StackLayout>
+
+                <Button Text="Test MQTT Connection" 
+        Clicked="OnTestMqttClicked"
+        BackgroundColor="#17a2b8"
+        TextColor="White"/>
+
             </StackLayout>
         </Border>
 

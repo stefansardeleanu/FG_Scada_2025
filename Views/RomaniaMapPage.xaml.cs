@@ -4,6 +4,8 @@ using SkiaSharp.Views.Maui.Controls;
 using FG_Scada_2025.ViewModels;
 using FG_Scada_2025.Helpers;
 using FG_Scada_2025.Models;
+using FG_Scada_2025.Services;
+
 
 namespace FG_Scada_2025.Views;
 
@@ -193,6 +195,24 @@ public partial class RomaniaMapPage : ContentPage
         }
 
         e.Handled = true;
+    }
+
+
+    // ADAUGAT DE MINE
+
+    private async void OnTestMqttClicked(object sender, EventArgs e)
+    {
+        try
+        {
+            var connectionManager = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<ConnectionManager>(Handler.MauiContext.Services);
+            var viewModel = new ConnectionTestViewModel(connectionManager);
+            var page = new ConnectionTestPage(viewModel);
+            await Navigation.PushAsync(page);
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlert("Error", ex.Message, "OK");
+        }
     }
 
     private void HandleTouchEvent(SKPoint touchPoint)

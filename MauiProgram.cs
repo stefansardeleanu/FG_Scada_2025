@@ -22,6 +22,9 @@ public static class MauiProgram
         builder.Services.AddSingleton<DataService>();
         builder.Services.AddSingleton<NavigationService>();
 
+        // Register MQTT Services
+        builder.Services.AddSingleton<ConnectionManager>();
+
         // Register ViewModels
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<RomaniaMapViewModel>();
