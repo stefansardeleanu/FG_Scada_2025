@@ -5,6 +5,13 @@
              x:Class="FG_Scada_2025.Views.SensorsPage"
              Title="{Binding Title}">
 
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <helpers:BoolToRealTimeTextConverter x:Key="BoolToRealTimeTextConverter" />
+            <helpers:BoolToRealTimeColorConverter x:Key="BoolToRealTimeColorConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
     <Grid RowDefinitions="Auto,Auto,*">
 
         <!-- Header -->

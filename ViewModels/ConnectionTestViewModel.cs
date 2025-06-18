@@ -14,7 +14,7 @@ namespace FG_Scada_2025.ViewModels
         private string _brokerPort = "1883";
         private string _username = "atsd";
         private string _password = "GroupATSD579!";
-        private string _testTopic = "PLCNext/+";
+        private string _testTopic = "+/+";
         private string _connectionStatus = "Disconnected";
         private string _statusColor = "Red";
         private string _statusBackgroundColor = "#dc3545";
@@ -173,32 +173,31 @@ namespace FG_Scada_2025.ViewModels
                     return;
                 }
 
-                // Subscribe directly to the specified topic
-                var topicFilter = new MQTTnet.MqttTopicFilterBuilder()
-                    .WithTopic(TestTopic)
-                    .Build();
+                AddLogMessage($"Attempting to subscribe to: {TestTopic}");
 
-                // Access the MQTT client through the connection manager
-                // For now, we'll add a method to handle custom topic subscription
-                await SubscribeToCustomTopicAsync(TestTopic);
+                // Use the new auto-discovery subscription for all sites
+                if (TestTopic == "+/+" || TestTopic == "#")
+                {
+                    await _connectionManager.SubscribeToAllSitesAsync();
+                    AddLogMessage("Subscribed to auto-discovery - will detect all sites automatically");
+                }
+                else
+                {
+                    // Subscribe to custom topic
+                    await _connectionManager.SubscribeToCustomTopicAsync(TestTopic);
+                }
 
                 if (!SubscribedTopics.Contains(TestTopic))
                 {
                     SubscribedTopics.Add(TestTopic);
                 }
 
-                AddLogMessage($"Subscribed to topic: {TestTopic}");
+                AddLogMessage($"Successfully subscribed to topic: {TestTopic}");
             }
             catch (Exception ex)
             {
                 AddLogMessage($"Subscribe error: {ex.Message}");
             }
-        }
-
-        private async Task SubscribeToCustomTopicAsync(string topic)
-        {
-            // Use the connection manager's new custom topic subscription method
-            await _connectionManager.SubscribeToCustomTopicAsync(topic);
         }
 
         private async Task GoBackAsync()
@@ -230,10 +229,43 @@ namespace FG_Scada_2025.ViewModels
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
+                string displayPayload;
+
+                if (e.SensorData.SiteName == "Raw")
+                {
+                    // This is a raw message, show the topic as the payload
+                    displayPayload = $"RAW: {e.SensorData.ChannelId}";
+                }
+                else
+                {
+                    // This is parsed data - display based on detector type
+                    var detectorIcon = MqttService.GetDetectorIcon(e.SensorData.DetectorType);
+                    var units = MqttService.GetDetectorUnits(e.SensorData.DetectorType);
+                    var detectorTypeName = MqttService.GetDetectorTypeName(e.SensorData.DetectorType);
+
+                    // For gas detectors (types 1,2), show process value with appropriate units
+                    // For others (types 3,4,5), show current value in mA
+                    string valueDisplay;
+                    if (e.SensorData.DetectorType == 1 || e.SensorData.DetectorType == 2)
+                    {
+                        valueDisplay = $"{e.SensorData.ProcessValue:F1} {units}";
+                    }
+                    else
+                    {
+                        valueDisplay = $"{e.SensorData.CurrentValue:F1} {units}";
+                    }
+
+                    displayPayload = $"[{detectorIcon}] Site: {e.SensorData.SiteId}_{e.SensorData.SiteName} | " +
+                                   $"Channel: {e.SensorData.ChannelId} | Tag: {e.SensorData.TagName} | " +
+                                   $"{detectorTypeName} | Value: {valueDisplay} | " +
+                                   $"Current: {e.SensorData.CurrentValue:F1}mA | " +
+                                   $"Status: {GetStatusText(e.SensorData.Status)}";
+                }
+
                 var message = new ReceivedMessage
                 {
-                    Topic = $"PLCNext/{e.SensorData.SensorId}",
-                    Payload = $"TAG: {e.SensorData.TagName}, Current: {e.SensorData.CurrentValue:F2}mA, PV: {e.SensorData.ProcessValue:F2}, Status: {GetStatusText(e.SensorData.Status)}",
+                    Topic = e.SensorData.SiteName == "Raw" ? e.SensorData.ChannelId : e.SensorData.FullTopic,
+                    Payload = displayPayload,
                     Timestamp = e.SensorData.Timestamp
                 };
 
@@ -244,6 +276,14 @@ namespace FG_Scada_2025.ViewModels
                 {
                     ReceivedMessages.RemoveAt(ReceivedMessages.Count - 1);
                 }
+            });
+        }
+
+        private void OnLogMessageReceived(object? sender, string logMessage)
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                AddLogMessage(logMessage);
             });
         }
 
@@ -260,14 +300,6 @@ namespace FG_Scada_2025.ViewModels
                 SensorStatus.LineShortFault => "Line Short",
                 _ => "Unknown"
             };
-        }
-
-        private void OnLogMessageReceived(object? sender, string logMessage)
-        {
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                AddLogMessage(logMessage);
-            });
         }
 
         private void AddLogMessage(string message)

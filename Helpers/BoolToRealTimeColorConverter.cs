@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Globalization;
 
 namespace FG_Scada_2025.Helpers
 {
@@ -13,9 +8,9 @@ namespace FG_Scada_2025.Helpers
         {
             if (value is bool isEnabled)
             {
-                return isEnabled ? Colors.Green : Colors.Gray;
+                return isEnabled ? "#27ae60" : "#e74c3c"; // Green when ON, Red when OFF
             }
-            return Colors.Gray;
+            return "#e74c3c"; // Default to red (OFF)
         }
 
         public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

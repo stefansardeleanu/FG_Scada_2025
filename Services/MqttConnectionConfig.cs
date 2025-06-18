@@ -75,15 +75,9 @@
 
             try
             {
-                foreach (var siteId in _currentConfig.AllowedSites)
-                {
-                    await _mqttService.SubscribeToSiteAsync(siteId);
-                    if (!_subscribedSites.Contains(siteId))
-                    {
-                        _subscribedSites.Add(siteId);
-                    }
-                }
-                LogMessage($"Subscribed to {_subscribedSites.Count} sites");
+                // Use auto-discovery instead of individual site subscriptions
+                await _mqttService.SubscribeToAllSitesAsync();
+                LogMessage("Subscribed to auto-discovery for all sites");
             }
             catch (Exception ex)
             {
@@ -101,12 +95,9 @@
 
             try
             {
-                await _mqttService.SubscribeToSiteAsync(siteId);
-                if (!_subscribedSites.Contains(siteId))
-                {
-                    _subscribedSites.Add(siteId);
-                }
-                LogMessage($"Subscribed to site: {siteId}");
+                // For now, just use the auto-discovery subscription
+                await _mqttService.SubscribeToAllSitesAsync();
+                LogMessage($"Subscribed to auto-discovery (includes site: {siteId})");
             }
             catch (Exception ex)
             {
@@ -131,6 +122,29 @@
             {
                 LogMessage($"Error subscribing to custom topic {topic}: {ex.Message}");
             }
+        }
+
+        public async Task SubscribeToAllSitesAsync()
+        {
+            try
+            {
+                await _mqttService.SubscribeToAllSitesAsync();
+                LogMessage("Subscribed to auto-discovery for all sites");
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error subscribing to all sites: {ex.Message}");
+            }
+        }
+
+        public List<SiteConnectionInfo> GetDiscoveredSites()
+        {
+            return _mqttService.GetDiscoveredSites();
+        }
+
+        public SiteConnectionInfo? GetSiteInfo(int siteId)
+        {
+            return _mqttService.GetSiteInfo(siteId);
         }
 
         public async Task DisconnectAsync()

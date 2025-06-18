@@ -24,6 +24,7 @@ public static class MauiProgram
 
         // Register MQTT Services
         builder.Services.AddSingleton<ConnectionManager>();
+        builder.Services.AddSingleton<RealTimeDataService>();
 
         // Register ViewModels
         builder.Services.AddTransient<LoginViewModel>();
@@ -32,6 +33,8 @@ public static class MauiProgram
         builder.Services.AddTransient<SiteViewModel>();
         builder.Services.AddTransient<SensorsViewModel>();
         builder.Services.AddTransient<AlarmHistoryViewModel>();
+        builder.Services.AddTransient<ConnectionTestViewModel>();
+        builder.Services.AddTransient<ConnectionTestViewModel>();
 
         // Register Views
         builder.Services.AddTransient<LoginPage>();
@@ -40,6 +43,7 @@ public static class MauiProgram
         builder.Services.AddTransient<SitePage>();
         builder.Services.AddTransient<SensorsPage>();
         builder.Services.AddTransient<AlarmHistoryPage>();
+        builder.Services.AddTransient<ConnectionTestPage>();
 
         return builder.Build();
     }

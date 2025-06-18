@@ -62,7 +62,6 @@
 	<ItemGroup>
 	  <None Remove="Data\Counties\CountiesConfig.json" />
 	  <None Remove="Data\Counties\Gorj.json" />
-	  <None Remove="Data\Sites\PanouHurezani.json" />
 	  <None Remove="Resources\Maps\romania_map.svg" />
 	</ItemGroup>
 
@@ -82,7 +81,6 @@
 	<ItemGroup>
 	  <MauiAsset Include="Data\CountiesConfig.json" />
 	  <MauiAsset Include="Data\Counties\Gorj.json" />
-	  <MauiAsset Include="Data\Sites\PanouHurezani.json" />
 	  <MauiAsset Include="Resources\Maps\romania_map.svg" />
 	</ItemGroup>
 
