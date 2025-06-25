@@ -104,6 +104,8 @@ namespace FG_Scada_2025.Services
             }
         }
 
+        // Replace the SubscribeToAllSitesAsync method in MqttService.cs with this version:
+
         public async Task SubscribeToAllSitesAsync()
         {
             try
@@ -114,26 +116,35 @@ namespace FG_Scada_2025.Services
                     return;
                 }
 
-                // Subscribe to multiple patterns to catch different formats:
-                // 1. +/+ (for /5_PanouHurezani/CH40)
-                // 2. PLCNext/+/+ (for PLCNext/5_PanouHurezani/CH40)
-                // 3. PLCNext/+ (for simple PLCNext/CH40 format)
-
-                var patterns = new[] { "+/+", "PLCNext/+/+", "PLCNext/+" };
-
-                foreach (var pattern in patterns)
+                // Subscribe to your specific pattern
+                var subscriptionTopics = new[]
                 {
-                    var topicFilter = new MqttTopicFilterBuilder()
-                        .WithTopic(pattern)
-                        .Build();
+            "/PLCNEXT/+/+",      // For /PLCNEXT/5_PanouHurezani/CH41
+            "/PLCNEXT/+",        // For site-level topics /PLCNEXT/5_PanouHurezani
+            "PLCNEXT/+/+",       // Without leading slash
+            "PLCNEXT/+",         // Site-level without leading slash
+            "/+/+",              // Generic fallback
+            "+/+"                // Generic fallback without slash
+        };
 
-                    await _mqttClient.SubscribeAsync(topicFilter);
-                    LogMessage($"Subscribed to pattern: {pattern}");
+                foreach (var topic in subscriptionTopics)
+                {
+                    try
+                    {
+                        await _mqttClient.SubscribeAsync(topic);
+                        LogMessage($"✅ Subscribed to: {topic}");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogMessage($"❌ Failed to subscribe to {topic}: {ex.Message}");
+                    }
                 }
+
+                LogMessage("MQTT subscription completed - waiting for messages...");
             }
             catch (Exception ex)
             {
-                LogMessage($"Error subscribing to all sites: {ex.Message}");
+                LogMessage($"Error subscribing to topics: {ex.Message}");
             }
         }
 
@@ -264,116 +275,186 @@ namespace FG_Scada_2025.Services
             }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
         }
 
+        // Replace the OnMessageReceivedAsync method in MqttService.cs with this safe version:
+
         private Task OnMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs e)
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine($"🚀 OnMessageReceivedAsync called");
+
                 string topic = e.ApplicationMessage.Topic;
+                System.Diagnostics.Debug.WriteLine($"📍 Topic extracted: {topic}");
 
                 // Convert ReadOnlySequence<byte> to string
                 string payload;
-                var payloadSequence = e.ApplicationMessage.Payload;
-                if (payloadSequence.IsSingleSegment)
+                try
                 {
-                    payload = Encoding.UTF8.GetString(payloadSequence.FirstSpan);
+                    var payloadSequence = e.ApplicationMessage.Payload;
+                    if (payloadSequence.IsSingleSegment)
+                    {
+                        payload = Encoding.UTF8.GetString(payloadSequence.FirstSpan);
+                    }
+                    else
+                    {
+                        var payloadArray = payloadSequence.ToArray();
+                        payload = Encoding.UTF8.GetString(payloadArray);
+                    }
+                    System.Diagnostics.Debug.WriteLine($"📦 Payload extracted: {payload}");
                 }
-                else
+                catch (Exception payloadEx)
                 {
-                    var payloadArray = payloadSequence.ToArray();
-                    payload = Encoding.UTF8.GetString(payloadArray);
+                    System.Diagnostics.Debug.WriteLine($"❌ Error extracting payload: {payloadEx.Message}");
+                    return Task.CompletedTask;
                 }
 
                 LogMessage($"RAW MESSAGE - Topic: {topic}, Payload: {payload}");
                 System.Diagnostics.Debug.WriteLine($"RAW MQTT MESSAGE - Topic: {topic}, Payload: {payload}");
 
-                // Parse the new topic structure: /{SiteID}_{SiteName}/{ChannelID}
-                var parsedTopic = ParseTopicStructure(topic);
-                if (parsedTopic == null)
+                // Parse the topic structure
+                TopicInfo? parsedTopic = null;
+                try
                 {
-                    LogMessage($"Invalid topic structure: {topic}");
+                    parsedTopic = ParseTopicStructure(topic);
+                    if (parsedTopic == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"❌ Invalid topic structure: {topic}");
+                        return Task.CompletedTask;
+                    }
+                    System.Diagnostics.Debug.WriteLine($"✅ Topic parsed successfully: Site={parsedTopic.SiteId}_{parsedTopic.SiteName}, Channel={parsedTopic.ChannelId}");
+                }
+                catch (Exception topicEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"❌ Error parsing topic: {topicEx.Message}");
                     return Task.CompletedTask;
                 }
 
                 // Update site connection tracking
-                UpdateSiteConnection(parsedTopic.SiteId, parsedTopic.SiteName, parsedTopic.ChannelId);
+                try
+                {
+                    UpdateSiteConnection(parsedTopic.SiteId, parsedTopic.SiteName, parsedTopic.ChannelId);
+                    System.Diagnostics.Debug.WriteLine($"🔗 Site connection updated");
+                }
+                catch (Exception connEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"❌ Error updating site connection: {connEx.Message}");
+                }
 
                 // Always raise a raw message event first
-                var rawSensorData = new SensorData
+                try
                 {
-                    SiteId = 0,
-                    SiteName = "Raw",
-                    ChannelId = topic,
-                    TagName = "RAW_MESSAGE",
-                    ProcessValue = 0,
-                    CurrentValue = 0,
-                    DetectorType = 0,
-                    Status = SensorStatus.Normal,
-                    Timestamp = DateTime.Now,
-                    FullTopic = topic
-                };
+                    var rawSensorData = new SensorData
+                    {
+                        SiteId = 0,
+                        SiteName = "Raw",
+                        ChannelId = topic,
+                        TagName = "RAW_MESSAGE",
+                        ProcessValue = 0,
+                        CurrentValue = 0,
+                        DetectorType = 0,
+                        Status = SensorStatus.Normal,
+                        Timestamp = DateTime.Now,
+                        FullTopic = topic
+                    };
 
-                SensorDataReceived?.Invoke(this, new SensorDataReceivedEventArgs(rawSensorData));
+                    System.Diagnostics.Debug.WriteLine($"📤 About to fire raw sensor event");
+                    SensorDataReceived?.Invoke(this, new SensorDataReceivedEventArgs(rawSensorData));
+                    System.Diagnostics.Debug.WriteLine($"✅ Raw sensor event fired");
+                }
+                catch (Exception rawEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"❌ Error firing raw sensor event: {rawEx.Message}");
+                }
 
                 // Try to parse JSON payload
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine($"🔍 Attempting to parse JSON for {parsedTopic.SiteId}_{parsedTopic.SiteName}/{parsedTopic.ChannelId}");
+
                     var sensorData = ParseSensorJsonData(payload, parsedTopic);
                     if (sensorData != null)
                     {
-                        LogMessage($"PARSED DATA - Site: {sensorData.SiteId}_{sensorData.SiteName}, Channel: {sensorData.ChannelId}, Tag: {sensorData.TagName}, PV: {sensorData.ProcessValue}, Status: {sensorData.Status}");
+                        System.Diagnostics.Debug.WriteLine($"✅ PARSED DATA - Site: {sensorData.SiteId}_{sensorData.SiteName}, Channel: {sensorData.ChannelId}, Tag: {sensorData.TagName}, PV: {sensorData.ProcessValue}, Current: {sensorData.CurrentValue}, Status: {sensorData.Status}");
+
                         // Raise event with parsed sensor data
-                        SensorDataReceived?.Invoke(this, new SensorDataReceivedEventArgs(sensorData));
+                        try
+                        {
+                            System.Diagnostics.Debug.WriteLine($"📤 About to fire parsed sensor event");
+                            SensorDataReceived?.Invoke(this, new SensorDataReceivedEventArgs(sensorData));
+                            System.Diagnostics.Debug.WriteLine($"✅ Parsed sensor event fired for {sensorData.TagName}");
+                        }
+                        catch (Exception eventEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"❌ Error firing parsed sensor event: {eventEx.Message}");
+                            System.Diagnostics.Debug.WriteLine($"❌ Event exception stack trace: {eventEx.StackTrace}");
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"❌ JSON parsing returned null for topic {topic}");
                     }
                 }
                 catch (JsonException jsonEx)
                 {
-                    LogMessage($"JSON parsing failed (this is OK for non-JSON messages): {jsonEx.Message}");
+                    System.Diagnostics.Debug.WriteLine($"❌ JSON parsing failed: {jsonEx.Message}");
+                    System.Diagnostics.Debug.WriteLine($"Payload was: {payload}");
                 }
+                catch (Exception parseEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"❌ General parsing error: {parseEx.Message}");
+                    System.Diagnostics.Debug.WriteLine($"❌ Parse exception stack trace: {parseEx.StackTrace}");
+                }
+
+                System.Diagnostics.Debug.WriteLine($"🏁 OnMessageReceivedAsync completed successfully");
             }
             catch (Exception ex)
             {
-                LogMessage($"Error processing received message: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"💥 FATAL ERROR in OnMessageReceivedAsync: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"💥 Stack trace: {ex.StackTrace}");
+                LogMessage($"FATAL ERROR in message processing: {ex.Message}");
             }
 
             return Task.CompletedTask;
         }
 
+        // Replace the ParseTopicStructure method in MqttService.cs with this version:
+
         private TopicInfo? ParseTopicStructure(string topic)
         {
             try
             {
-                // Handle both formats:
-                // 1. /5_PanouHurezani/CH40
-                // 2. PLCNext/5_PanouHurezani/CH40
+                LogMessage($"Parsing topic: '{topic}'");
 
                 string cleanTopic = topic;
 
-                // Remove PLCNext prefix if present
-                if (topic.StartsWith("PLCNext/"))
+                // Remove PLCNEXT prefix if present (case insensitive)
+                if (topic.ToUpper().Contains("PLCNEXT"))
                 {
-                    cleanTopic = topic.Replace("PLCNext/", "");
+                    // Remove /PLCNEXT/ or PLCNEXT/ keeping what comes after
+                    cleanTopic = System.Text.RegularExpressions.Regex.Replace(
+                        topic, @"^/?PLCNEXT/?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                 }
 
                 // Remove leading slash if present
-                if (cleanTopic.StartsWith("/"))
-                {
-                    cleanTopic = cleanTopic.TrimStart('/');
-                }
+                cleanTopic = cleanTopic.TrimStart('/');
+
+                LogMessage($"Cleaned topic: '{cleanTopic}'");
 
                 var parts = cleanTopic.Split('/');
-                if (parts.Length != 2)
+
+                if (parts.Length < 1)
                 {
-                    LogMessage($"Invalid topic structure: {topic} (expected 2 parts after cleaning, got {parts.Length})");
+                    LogMessage($"Invalid topic structure: {topic} (no parts after cleaning)");
                     return null;
                 }
 
                 var sitePart = parts[0]; // "5_PanouHurezani"
-                var channelPart = parts[1]; // "CH40"
+                string channelPart = parts.Length > 1 ? parts[1] : "SITE"; // "CH41" or "SITE" for site-level
 
                 var siteComponents = sitePart.Split('_');
                 if (siteComponents.Length < 2)
                 {
-                    LogMessage($"Invalid site part: {sitePart} (expected at least 2 components)");
+                    LogMessage($"Invalid site part: {sitePart} (expected format: ID_Name)");
                     return null;
                 }
 
@@ -385,7 +466,7 @@ namespace FG_Scada_2025.Services
 
                 var siteName = string.Join("_", siteComponents.Skip(1)); // Handle site names with underscores
 
-                LogMessage($"Parsed topic successfully: SiteID={siteId}, SiteName={siteName}, Channel={channelPart}");
+                LogMessage($"Successfully parsed - SiteID={siteId}, SiteName={siteName}, Channel={channelPart}");
 
                 return new TopicInfo
                 {
@@ -427,6 +508,8 @@ namespace FG_Scada_2025.Services
             }
         }
 
+        // Replace the ParseSensorJsonData method in MqttService.cs with this robust version:
+
         private SensorData? ParseSensorJsonData(string jsonPayload, TopicInfo topicInfo)
         {
             try
@@ -434,13 +517,13 @@ namespace FG_Scada_2025.Services
                 using var document = JsonDocument.Parse(jsonPayload);
                 var root = document.RootElement;
 
-                // Parse your actual JSON structure
-                // { "rCH40_mA": "0.000000E+00", "rCH40_PV": "0.000000", "iCH40_DetStatus": "1", "strCH40_TAG": "" }
+                LogMessage($"Parsing JSON for {topicInfo.SiteId}_{topicInfo.SiteName}/{topicInfo.ChannelId}");
 
                 string? channelNumber = null;
                 double currentValue = 0;
                 double processValue = 0;
                 int detectorStatus = 0;
+                int detectorType = 0;
                 string tagName = string.Empty;
 
                 // Extract channel number and data
@@ -449,66 +532,135 @@ namespace FG_Scada_2025.Services
                     var propertyName = property.Name;
                     var propertyValue = property.Value.GetString() ?? "0";
 
-                    if (propertyName.Contains("_mA") && propertyName.StartsWith("rCH"))
+                    LogMessage($"Processing property: {propertyName} = '{propertyValue}'");
+
+                    try
                     {
-                        // Extract channel number (e.g., "rCH40_mA" -> "40")
-                        var parts = propertyName.Split('_');
-                        if (parts.Length > 0)
+                        if (propertyName.Contains("_mA") && propertyName.StartsWith("rCH"))
                         {
-                            channelNumber = parts[0].Replace("rCH", "");
+                            // Extract channel number (e.g., "rCH41_mA" -> "41")
+                            var parts = propertyName.Split('_');
+                            if (parts.Length > 0)
+                            {
+                                channelNumber = parts[0].Replace("rCH", "");
+                                LogMessage($"Extracted channel number: {channelNumber}");
+                            }
+
+                            // Parse current value (handle scientific notation)
+                            if (double.TryParse(propertyValue, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double current))
+                            {
+                                currentValue = current;
+                                LogMessage($"Parsed current value: {currentValue}");
+                            }
+                            else
+                            {
+                                LogMessage($"Failed to parse current value: '{propertyValue}'");
+                            }
                         }
-                        // Parse current value (handle scientific notation)
-                        if (double.TryParse(propertyValue, out double current))
+                        else if (propertyName.Contains("_PV") && propertyName.StartsWith("rCH"))
                         {
-                            currentValue = current;
+                            // Parse process value
+                            if (double.TryParse(propertyValue, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double pv))
+                            {
+                                processValue = pv;
+                                LogMessage($"Parsed process value: {processValue}");
+                            }
+                            else
+                            {
+                                LogMessage($"Failed to parse process value: '{propertyValue}'");
+                            }
+                        }
+                        else if (propertyName.Contains("_DetStatus") && propertyName.StartsWith("iCH"))
+                        {
+                            // Parse detector status - handle both int and scientific notation
+                            if (double.TryParse(propertyValue, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double statusDouble))
+                            {
+                                detectorStatus = (int)Math.Round(statusDouble);
+                                LogMessage($"Parsed detector status: {detectorStatus} (from '{propertyValue}')");
+                            }
+                            else
+                            {
+                                LogMessage($"Failed to parse detector status: '{propertyValue}'");
+                            }
+                        }
+                        else if (propertyName.Contains("_DetType") && propertyName.StartsWith("iCH"))
+                        {
+                            // Parse detector type
+                            if (int.TryParse(propertyValue, out int type))
+                            {
+                                detectorType = type;
+                                LogMessage($"Parsed detector type: {detectorType}");
+                            }
+                            else
+                            {
+                                LogMessage($"Failed to parse detector type: '{propertyValue}'");
+                            }
+                        }
+                        else if (propertyName.Contains("_TAG") && propertyName.StartsWith("strCH"))
+                        {
+                            tagName = propertyValue;
+                            LogMessage($"Parsed tag name: '{tagName}'");
                         }
                     }
-                    else if (propertyName.Contains("_PV") && propertyName.StartsWith("rCH"))
+                    catch (Exception ex)
                     {
-                        // Parse process value
-                        if (double.TryParse(propertyValue, out double pv))
-                        {
-                            processValue = pv;
-                        }
-                    }
-                    else if (propertyName.Contains("_DetStatus") && propertyName.StartsWith("iCH"))
-                    {
-                        // Parse detector status
-                        if (int.TryParse(propertyValue, out int status))
-                        {
-                            detectorStatus = status;
-                        }
-                    }
-                    else if (propertyName.Contains("_TAG") && propertyName.StartsWith("strCH"))
-                    {
-                        tagName = propertyValue;
+                        LogMessage($"Error parsing property {propertyName}: {ex.Message}");
                     }
                 }
 
+                // Create sensor data if we have a valid channel number AND valid conditions
                 if (!string.IsNullOrEmpty(channelNumber))
                 {
-                    // If tag name is empty, create a default one
-                    if (string.IsNullOrEmpty(tagName))
+                    LogMessage($"Channel {channelNumber}: Tag='{tagName}', Status={detectorStatus}, Type={detectorType}");
+
+                    // Filter out detectors with empty tags OR status > 10
+                    if (string.IsNullOrEmpty(tagName) || string.IsNullOrWhiteSpace(tagName))
                     {
-                        tagName = $"CH{channelNumber}-DETECTOR";
+                        LogMessage($"❌ Skipping CH{channelNumber} - empty tag name");
+                        return null;
                     }
 
-                    // Determine detector type based on process value range and current
-                    int detectorType = DetermineDetectorType(processValue, currentValue);
+                    if (detectorStatus > 10)
+                    {
+                        LogMessage($"❌ Skipping CH{channelNumber} - invalid status: {detectorStatus} (must be <= 10)");
+                        return null;
+                    }
 
-                    return new SensorData
+                    // Use the tag from MQTT (we know it's not empty due to filter above)
+                    string finalTagName = tagName.Trim();
+
+                    // Use the detector type from PLC data
+                    int finalDetectorType = detectorType;
+                    if (detectorType == 0)
+                    {
+                        finalDetectorType = DetermineDetectorType(processValue, currentValue);
+                        LogMessage($"PLC provided detector type 0 for CH{channelNumber}, using heuristic: {finalDetectorType}");
+                    }
+                    else
+                    {
+                        LogMessage($"Using PLC-provided detector type for CH{channelNumber}: {detectorType}");
+                    }
+
+                    var sensorData = new SensorData
                     {
                         SiteId = topicInfo.SiteId,
                         SiteName = topicInfo.SiteName,
                         ChannelId = $"CH{channelNumber}",
-                        TagName = tagName,
+                        TagName = finalTagName,
                         ProcessValue = processValue,
                         CurrentValue = currentValue,
-                        DetectorType = detectorType,
+                        DetectorType = finalDetectorType,
                         Status = (SensorStatus)detectorStatus,
                         Timestamp = DateTime.Now,
                         FullTopic = $"/{topicInfo.SiteId}_{topicInfo.SiteName}/{topicInfo.ChannelId}"
                     };
+
+                    LogMessage($"✅ Successfully created sensor data for {finalTagName}: PV={processValue}, Current={currentValue}, Status={detectorStatus}");
+                    return sensorData;
+                }
+                else
+                {
+                    LogMessage($"❌ No valid channel number found in JSON");
                 }
 
                 return null;
@@ -516,6 +668,7 @@ namespace FG_Scada_2025.Services
             catch (Exception ex)
             {
                 LogMessage($"Error parsing sensor JSON: {ex.Message}");
+                LogMessage($"JSON payload was: {jsonPayload}");
                 return null;
             }
         }

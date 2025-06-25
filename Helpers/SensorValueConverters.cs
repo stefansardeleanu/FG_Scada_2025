@@ -9,9 +9,25 @@ namespace FG_Scada_2025.Helpers
         {
             if (value is Sensor sensor)
             {
+                // Ensure we don't divide by zero
+                if (sensor.Config.MaxValue <= 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"📊 Sensor {sensor.Tag}: MaxValue is {sensor.Config.MaxValue}, returning 0%");
+                    return 0;
+                }
+
+                // Calculate percentage (0-100)
                 float percentage = (sensor.CurrentValue.ProcessValue / sensor.Config.MaxValue) * 100;
-                return Math.Min(100, Math.Max(0, percentage));
+
+                // Ensure percentage is within bounds (0-100)
+                percentage = Math.Min(100, Math.Max(0, percentage));
+
+                System.Diagnostics.Debug.WriteLine($"📊 Sensor {sensor.Tag}: Value={sensor.CurrentValue.ProcessValue}, MaxValue={sensor.Config.MaxValue}, Percentage={percentage:F1}%");
+
+                return percentage;
             }
+
+            System.Diagnostics.Debug.WriteLine($"📊 SensorValueToPercentageConverter: value is not Sensor, returning 0");
             return 0;
         }
 
@@ -44,15 +60,24 @@ namespace FG_Scada_2025.Helpers
     {
         public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
+            System.Diagnostics.Debug.WriteLine($"🎨 SensorValueToBarColorConverter called with value: {value?.GetType().Name}");
+
             if (value is Sensor sensor)
             {
+                var color = Colors.Gray; // default
+
                 if (sensor.CurrentValue.ProcessValue >= sensor.Alarms.AlarmLevel2)
-                    return Colors.Red;
+                    color = Colors.Red;
                 else if (sensor.CurrentValue.ProcessValue >= sensor.Alarms.AlarmLevel1)
-                    return Colors.Orange;
+                    color = Colors.Orange;
                 else
-                    return Colors.Green;
+                    color = Colors.Green;
+
+                System.Diagnostics.Debug.WriteLine($"🎨 Sensor {sensor.Tag}: Value={sensor.CurrentValue.ProcessValue}, Alarm1={sensor.Alarms.AlarmLevel1}, Alarm2={sensor.Alarms.AlarmLevel2}, Color={color}");
+                return color;
             }
+
+            System.Diagnostics.Debug.WriteLine($"🎨 SensorValueToBarColorConverter returning Gray (value not Sensor)");
             return Colors.Gray;
         }
 

@@ -6,7 +6,6 @@ using FG_Scada_2025.Helpers;
 using FG_Scada_2025.Models;
 using FG_Scada_2025.Services;
 
-
 namespace FG_Scada_2025.Views;
 
 public partial class RomaniaMapPage : ContentPage
@@ -48,6 +47,14 @@ public partial class RomaniaMapPage : ContentPage
 
         // Refresh canvas
         MapCanvas.InvalidateSurface();
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+
+        // Clean up ViewModel
+        _viewModel.OnDisappearing();
     }
 
     private async Task LoadSvgDataAsync()
@@ -197,24 +204,6 @@ public partial class RomaniaMapPage : ContentPage
         e.Handled = true;
     }
 
-
-    // ADAUGAT DE MINE
-
-    private async void OnTestMqttClicked(object sender, EventArgs e)
-    {
-        try
-        {
-            var connectionManager = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetService<ConnectionManager>(Handler.MauiContext.Services);
-            var viewModel = new ConnectionTestViewModel(connectionManager);
-            var page = new ConnectionTestPage(viewModel);
-            await Navigation.PushAsync(page);
-        }
-        catch (Exception ex)
-        {
-            await DisplayAlert("Error", ex.Message, "OK");
-        }
-    }
-
     private void HandleTouchEvent(SKPoint touchPoint)
     {
         // Convert to SVG coordinates
@@ -245,7 +234,7 @@ public partial class RomaniaMapPage : ContentPage
 
             Console.WriteLine($"Navigating to county: {touchedCountyId}");
 
-            // Navigate to county page
+            // Navigate to county page using your existing method
             MainThread.BeginInvokeOnMainThread(async () =>
             {
                 try
@@ -265,4 +254,7 @@ public partial class RomaniaMapPage : ContentPage
             Console.WriteLine("No county found at touch location");
         }
     }
+
+    // REMOVED: OnTestMqttClicked method - replaced by MQTT button in header
+    // The MQTT functionality is now handled by the ToggleMqttConnectionCommand in the ViewModel
 }

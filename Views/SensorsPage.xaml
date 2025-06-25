@@ -238,12 +238,12 @@
 
                                         <!-- Horizontal Bargraph Group -->
                                         <Border BackgroundColor="#f8f9fa"
-                                                StrokeThickness="1"
-                                                Stroke="#dee2e6"
-                                                StrokeShape="RoundRectangle 6"
-                                                Padding="12,8"
-                                                HeightRequest="50"
-                                                HorizontalOptions="FillAndExpand">
+        StrokeThickness="1"
+        Stroke="#dee2e6"
+        StrokeShape="RoundRectangle 6"
+        Padding="12,8"
+        HeightRequest="50"
+        HorizontalOptions="FillAndExpand">
 
                                             <StackLayout Spacing="4">
                                                 <!-- Scale Labels -->
@@ -255,23 +255,42 @@
                                                     <Label Grid.Column="4" Text="100" FontSize="9" TextColor="#666" HorizontalOptions="End"/>
                                                 </Grid>
 
-                                                <!-- Bargraph Container -->
-                                                <Grid HeightRequest="20">
-                                                    <!-- Background Bar -->
+                                                <!-- Responsive Bargraph Container -->
+                                                <Grid HeightRequest="20" HorizontalOptions="FillAndExpand">
+                                                    <!-- Background Bar (Full Width) -->
                                                     <Border BackgroundColor="#e2e8f0"
-                                                           HeightRequest="20"
-                                                           HorizontalOptions="Fill"
-                                                           StrokeShape="RoundRectangle 10"
-                                                           StrokeThickness="0"/>
+                   HeightRequest="20"
+                   HorizontalOptions="Fill"
+                   StrokeShape="RoundRectangle 10"
+                   StrokeThickness="0"/>
 
-                                                    <!-- Value Bar -->
-                                                    <Border BackgroundColor="{Binding ., Converter={StaticResource SensorValueToBarColorConverter}}"
-                                                           HeightRequest="20"
-                                                           WidthRequest="{Binding ., Converter={StaticResource SensorValueToBarWidthConverter}}"
-                                                           HorizontalOptions="Start"
-                                                           StrokeShape="RoundRectangle 10"
-                                                           StrokeThickness="0"/>
+                                                    <!-- Value Bar (Percentage Width) -->
+                                                    <Grid HorizontalOptions="Fill">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="{Binding ., Converter={StaticResource SensorValueToPercentageConverter}, StringFormat='{0}*'}" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <Border Grid.Column="0"
+                       BackgroundColor="{Binding ., Converter={StaticResource SensorValueToBarColorConverter}}"
+                       HeightRequest="20"
+                       HorizontalOptions="Fill"
+                       StrokeShape="RoundRectangle 10"
+                       StrokeThickness="0"
+                       MinimumWidthRequest="2"/>
+                                                    </Grid>
                                                 </Grid>
+
+                                                <!-- Process Value Display -->
+                                                <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Spacing="5">
+                                                    <Label Text="{Binding CurrentValue.ProcessValue, StringFormat='{0:F1}'}"
+                   FontSize="12"
+                   FontAttributes="Bold"
+                   TextColor="#2c3e50"/>
+                                                    <Label Text="{Binding CurrentValue.Unit}"
+                   FontSize="10"
+                   TextColor="#7f8c8d"/>
+                                                </StackLayout>
                                             </StackLayout>
                                         </Border>
 

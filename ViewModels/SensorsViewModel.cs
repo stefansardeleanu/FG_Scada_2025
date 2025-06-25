@@ -3,6 +3,7 @@ using System.Windows.Input;
 using FG_Scada_2025.Models;
 using FG_Scada_2025.Services;
 using FG_Scada_2025.Helpers;
+using System.Linq;
 
 namespace FG_Scada_2025.ViewModels
 {
@@ -100,22 +101,23 @@ namespace FG_Scada_2025.ViewModels
             IsBusy = true;
             try
             {
-                System.Diagnostics.Debug.WriteLine("Initializing SensorsViewModel with MQTT...");
+                System.Diagnostics.Debug.WriteLine("Initializing SensorsViewModel...");
 
                 // Ensure real-time is enabled by default
                 IsRealTimeEnabled = true;
                 System.Diagnostics.Debug.WriteLine($"Real-time explicitly set to: {IsRealTimeEnabled}");
 
-                // Initialize real-time service
+                // REMOVED AUTO-CONNECT: Only initialize real-time service without connecting
                 await _realTimeDataService.InitializeAsync();
 
                 // Load sensors data
                 await LoadSensorsDataAsync();
 
-                // Start real-time updates
+                // Start real-time updates (will work when MQTT is connected)
                 StartRealTimeUpdates();
 
                 System.Diagnostics.Debug.WriteLine($"SensorsViewModel initialized: {Sensors.Count} sensors, Real-time: {IsRealTimeEnabled}");
+                System.Diagnostics.Debug.WriteLine("📢 Note: MQTT connection should be established from Romania Map page");
             }
             catch (Exception ex)
             {
@@ -144,14 +146,19 @@ namespace FG_Scada_2025.ViewModels
 
                 if (Site?.Sensors != null)
                 {
-                    // Update sensors collection
+                    // Clear existing sensors
                     Sensors.Clear();
-                    foreach (var sensor in Site.Sensors)
+
+                    // Sort sensors by Tag name (case-insensitive alphabetical order)
+                    var sortedSensors = Site.Sensors.OrderBy(s => s.Tag, StringComparer.OrdinalIgnoreCase).ToList();
+
+                    // Add sorted sensors to the collection
+                    foreach (var sensor in sortedSensors)
                     {
                         Sensors.Add(sensor);
                     }
 
-                    System.Diagnostics.Debug.WriteLine($"Loaded {Sensors.Count} sensors from configuration");
+                    System.Diagnostics.Debug.WriteLine($"Loaded {Sensors.Count} sensors from configuration (sorted by Tag name)");
 
                     // Apply real-time data overlay
                     LoadRealTimeDataOverlay();
@@ -169,26 +176,29 @@ namespace FG_Scada_2025.ViewModels
         {
             try
             {
-                // Get real-time data for PanouHurezani (site ID 5)
-                var siteInfo = _realTimeDataService.GetSiteInfo("PanouHurezani");
+                System.Diagnostics.Debug.WriteLine($"🔍 LoadRealTimeDataOverlay called - checking for cached data");
+
+                // Get real-time data for PanouHurezani (site ID 5) - use numeric ID
+                var siteInfo = _realTimeDataService.GetSiteInfo(5);
 
                 if (siteInfo != null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Found real-time data for PanouHurezani with {siteInfo.Sensors.Count} sensors");
+                    System.Diagnostics.Debug.WriteLine($"📦 Found cached real-time data for site {siteInfo.SiteId} with {siteInfo.Sensors.Count} sensors");
 
                     foreach (var realTimeData in siteInfo.Sensors.Values)
                     {
+                        System.Diagnostics.Debug.WriteLine($"🔄 Processing cached sensor: {realTimeData.TagName} = {realTimeData.ProcessValue}");
                         UpdateSensorWithRealTimeData(realTimeData);
                     }
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine("No real-time data found for PanouHurezani");
+                    System.Diagnostics.Debug.WriteLine("❌ No cached real-time data found for PanouHurezani - waiting for live MQTT updates");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading real-time data overlay: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"❌ Error loading real-time data overlay: {ex.Message}");
             }
         }
 
@@ -222,10 +232,8 @@ namespace FG_Scada_2025.ViewModels
 
                 if (sensor != null)
                 {
-                    // Store the index to replace the sensor and trigger UI update
-                    var index = Sensors.IndexOf(sensor);
-
-                    // Update sensor with real-time data
+                    // Update sensor properties directly - no RemoveAt/Insert needed!
+                    // The observable properties will automatically update the UI
                     sensor.CurrentValue.ProcessValue = (float)realTimeData.ProcessValue;
                     sensor.CurrentValue.Status = realTimeData.Status;
                     sensor.CurrentValue.Timestamp = realTimeData.Timestamp;
@@ -235,19 +243,27 @@ namespace FG_Scada_2025.ViewModels
                     // Update alarm states
                     UpdateAlarmStates(sensor);
 
-                    // Force UI update by removing and re-adding the sensor
-                    Sensors.RemoveAt(index);
-                    Sensors.Insert(index, sensor);
-
                     System.Diagnostics.Debug.WriteLine($"✅ Updated sensor {sensor.Tag} = {realTimeData.ProcessValue} {sensor.CurrentValue.Unit} (Reception interval: {timeSinceLastMessage.TotalSeconds:F1}s)");
                 }
                 else
                 {
-                    // Create new sensor from real-time data
+                    // Create new sensor from real-time data and add it in the correct sorted position
                     var newSensor = CreateSensorFromRealTimeData(realTimeData);
-                    Sensors.Add(newSensor);
 
-                    System.Diagnostics.Debug.WriteLine($"✅ Created new sensor {newSensor.Tag} = {realTimeData.ProcessValue}");
+                    // Find the correct position to insert the sensor (sorted by Tag name)
+                    int insertIndex = 0;
+                    for (int i = 0; i < Sensors.Count; i++)
+                    {
+                        if (string.Compare(Sensors[i].Tag, newSensor.Tag, StringComparison.OrdinalIgnoreCase) > 0)
+                        {
+                            insertIndex = i;
+                            break;
+                        }
+                        insertIndex = i + 1;
+                    }
+
+                    Sensors.Insert(insertIndex, newSensor);
+                    System.Diagnostics.Debug.WriteLine($"✅ Created new sensor {newSensor.Tag} = {realTimeData.ProcessValue} at position {insertIndex}");
                 }
             }
             catch (Exception ex)
@@ -322,31 +338,47 @@ namespace FG_Scada_2025.ViewModels
         private void UpdateAlarmStates(Sensor sensor)
         {
             var value = sensor.CurrentValue.ProcessValue;
-
             sensor.Alarms.IsAlarmLevel2Active = value >= sensor.Alarms.AlarmLevel2;
             sensor.Alarms.IsAlarmLevel1Active = value >= sensor.Alarms.AlarmLevel1 && !sensor.Alarms.IsAlarmLevel2Active;
         }
 
         private void OnSensorDataUpdated(object? sender, SensorDataUpdatedEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine($"🔄 MQTT data received: Site={e.SensorData.SiteId}_{e.SensorData.SiteName}, Tag={e.SensorData.TagName}, Value={e.SensorData.ProcessValue}, Real-time enabled: {IsRealTimeEnabled}");
+            System.Diagnostics.Debug.WriteLine($"🔄 MQTT data received in ViewModel: Site={e.SensorData.SiteId}_{e.SensorData.SiteName}, Tag={e.SensorData.TagName}, Value={e.SensorData.ProcessValue}, Current={e.SensorData.CurrentValue}, Status={e.SensorData.Status}");
+            System.Diagnostics.Debug.WriteLine($"🔥🔥🔥 EVERY MQTT UPDATE: {e.SensorData.TagName} = {e.SensorData.ProcessValue}");
+            // Skip raw messages
+            if (e.SensorData.SiteName == "Raw")
+            {
+                System.Diagnostics.Debug.WriteLine($"⚠️ Skipping raw message: {e.SensorData.ChannelId}");
+                return;
+            }
 
             // Process data for PanouHurezani (site ID 5) or any site that matches our current site
             if ((e.SensorData.SiteId == 5 && e.SensorData.SiteName == "PanouHurezani") ||
                 e.SensorData.SiteName.Equals(SiteName, StringComparison.OrdinalIgnoreCase))
             {
+                System.Diagnostics.Debug.WriteLine($"✅ Processing LIVE sensor data for our site: {e.SensorData.TagName} = {e.SensorData.ProcessValue}");
+
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    // Always apply updates regardless of real-time setting for now (to fix the issue)
-                    UpdateSensorWithRealTimeData(e.SensorData);
-                    LastUpdate = DateTime.Now.ToString("HH:mm:ss");
+                    try
+                    {
+                        System.Diagnostics.Debug.WriteLine($"🎯 Updating sensor in UI thread: {e.SensorData.TagName}");
+                        UpdateSensorWithRealTimeData(e.SensorData);
+                        LastUpdate = DateTime.Now.ToString("HH:mm:ss");
 
-                    System.Diagnostics.Debug.WriteLine($"✅ Auto-update applied: {e.SensorData.TagName} = {e.SensorData.ProcessValue} at {LastUpdate}");
+                        System.Diagnostics.Debug.WriteLine($"✅ Sensor updated in UI: {e.SensorData.TagName} = {e.SensorData.ProcessValue} at {LastUpdate}");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"❌ Error in OnSensorDataUpdated UI thread: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+                    }
                 });
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"❌ Ignoring data for different site: {e.SensorData.SiteId}_{e.SensorData.SiteName}");
+                System.Diagnostics.Debug.WriteLine($"❌ Ignoring data for different site: {e.SensorData.SiteId}_{e.SensorData.SiteName} (current site: {SiteName})");
             }
         }
 
@@ -378,12 +410,8 @@ namespace FG_Scada_2025.ViewModels
                             // This is based on when we last received an MQTT message, not sensor timestamps
                             if (timeSinceLastMessage.TotalSeconds > 90 && sensor.CurrentValue.Status != SensorStatus.DetectorDisabled)
                             {
-                                var index = Sensors.IndexOf(sensor);
+                                // Update the sensor status directly - no need for RemoveAt/Insert
                                 sensor.CurrentValue.Status = SensorStatus.DetectorDisabled;
-
-                                // Update UI
-                                Sensors.RemoveAt(index);
-                                Sensors.Insert(index, sensor);
 
                                 System.Diagnostics.Debug.WriteLine($"⚠️ Sensor {sensor.Tag} marked offline - no MQTT message for {timeSinceLastMessage.TotalSeconds:F0} seconds");
                             }

@@ -153,11 +153,11 @@
             {
                 await _mqttService.DisconnectAsync();
                 _subscribedSites.Clear();
-                _currentConfig = null;
+                LogMessage("Disconnected from MQTT broker");
             }
             catch (Exception ex)
             {
-                LogMessage($"Error during disconnect: {ex.Message}");
+                LogMessage($"Error disconnecting: {ex.Message}");
             }
         }
 
@@ -181,5 +181,6 @@
             _ = DisconnectAsync();
             _mqttService?.Dispose();
         }
+
     }
 }

@@ -2,35 +2,21 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:skia="clr-namespace:SkiaSharp.Views.Maui.Controls;assembly=SkiaSharp.Views.Maui.Controls"
+             xmlns:helpers="clr-namespace:FG_Scada_2025.Helpers"
              x:Class="FG_Scada_2025.Views.RomaniaMapPage"
              Title="{Binding Title}">
 
     <Grid RowDefinitions="Auto,Auto,*,Auto">
 
-        <!-- Header with user info and logout -->
+        <!-- Header with MQTT Connection -->
         <Border Grid.Row="0" 
                 BackgroundColor="#2c3e50" 
                 Padding="15,10">
-            <Grid ColumnDefinitions="*,Auto,Auto">
-                <Label Grid.Column="0"
-                       Text="{Binding UserWelcomeText}"
-                       TextColor="White"
-                       FontSize="16"
-                       VerticalOptions="Center"/>
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
 
-                <Button Grid.Column="1"
-                        Text="Refresh"
-                        Command="{Binding RefreshCommand}"
-                        BackgroundColor="#3498db"
-                        TextColor="White"
-                        FontSize="14"
-                        HeightRequest="35"
-                        WidthRequest="80"
-                        CornerRadius="5"
-                        Margin="0,0,10,0"/>
-
-                <Button Grid.Column="2"
-                        Text="Logout"
+                <!-- Logout Button -->
+                <Button Grid.Column="0"
+                        Text="← Logout"
                         Command="{Binding LogoutCommand}"
                         BackgroundColor="#e74c3c"
                         TextColor="White"
@@ -38,6 +24,60 @@
                         HeightRequest="35"
                         WidthRequest="80"
                         CornerRadius="5"/>
+
+                <!-- Title -->
+                <StackLayout Grid.Column="1" 
+                           Orientation="Vertical"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"
+                           Spacing="2">
+                    <Label Text="Romania Gas Detection Network"
+                           TextColor="White"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"/>
+                    <Label Text="Real-time Plant Monitoring System"
+                           TextColor="#bdc3c7"
+                           FontSize="12"
+                           HorizontalOptions="Center"/>
+                </StackLayout>
+
+                <!-- MQTT Connection Status -->
+                <Border Grid.Column="2"
+                        BackgroundColor="{Binding IsConnectedToMqtt, Converter={StaticResource BoolToConnectionColorConverter}}"
+                        Padding="8,4"
+                        StrokeShape="RoundRectangle 5"
+                        Margin="0,0,10,0">
+                    <StackLayout Orientation="Horizontal" Spacing="5">
+                        <Ellipse Fill="White"
+                                 WidthRequest="8"
+                                 HeightRequest="8"/>
+                        <Label Text="{Binding IsConnectedToMqtt, Converter={StaticResource BoolToConnectionTextConverter}}"
+                               TextColor="White"
+                               FontSize="12"
+                               FontAttributes="Bold"/>
+                    </StackLayout>
+                </Border>
+
+                <!-- MQTT Connect/Disconnect Button -->
+                <Button Grid.Column="3"
+                        Text="{Binding IsConnectedToMqtt, Converter={StaticResource BoolToMqttButtonTextConverter}}"
+                        Command="{Binding ToggleMqttConnectionCommand}"
+                        BackgroundColor="{Binding IsConnectedToMqtt, Converter={StaticResource BoolToMqttButtonColorConverter}}"
+                        TextColor="White"
+                        FontSize="12"
+                        HeightRequest="35"
+                        WidthRequest="90"
+                        CornerRadius="5"
+                        Margin="0,0,10,0"/>
+
+                <!-- Activity Indicator -->
+                <ActivityIndicator Grid.Column="4"
+                                 IsRunning="{Binding IsBusy}"
+                                 IsVisible="{Binding IsBusy}"
+                                 Color="White"
+                                 WidthRequest="25"
+                                 HeightRequest="25"/>
             </Grid>
         </Border>
 
@@ -80,11 +120,19 @@
                            FontSize="12"/>
                 </StackLayout>
 
-                <Button Text="Test MQTT Connection" 
-        Clicked="OnTestMqttClicked"
-        BackgroundColor="#17a2b8"
-        TextColor="White"/>
-
+                <!-- MQTT Status Indicator (Secondary) -->
+                <Border BackgroundColor="#34495e"
+                        Padding="8,4"
+                        StrokeShape="RoundRectangle 4">
+                    <StackLayout Orientation="Horizontal" Spacing="5">
+                        <Label Text="MQTT:"
+                               TextColor="White"
+                               FontSize="11"/>
+                        <Ellipse Fill="{Binding IsConnectedToMqtt, Converter={StaticResource BoolToConnectionColorConverter}}"
+                                 WidthRequest="10"
+                                 HeightRequest="10"/>
+                    </StackLayout>
+                </Border>
             </StackLayout>
         </Border>
 
@@ -120,10 +168,27 @@
         <Border Grid.Row="3" 
                 BackgroundColor="#34495e" 
                 Padding="10">
-            <Label Text="FG Scada 2025 - Fire Detection Monitoring System"
-                   TextColor="White"
-                   FontSize="12"
-                   HorizontalOptions="Center"/>
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Grid.Column="0"
+                       Text="FG Scada 2025 - Fire Detection Monitoring System"
+                       TextColor="White"
+                       FontSize="12"
+                       VerticalOptions="Center"/>
+
+                <!-- Connection Details -->
+                <StackLayout Grid.Column="1"
+                           Orientation="Horizontal" 
+                           Spacing="10">
+                    <Label Text="{Binding LastUpdateTime, StringFormat='Last Update: {0}'}"
+                           TextColor="#bdc3c7"
+                           FontSize="10"
+                           VerticalOptions="Center"/>
+                    <Label Text="{Binding ConnectedSitesCount, StringFormat='Active Sites: {0}'}"
+                           TextColor="#bdc3c7"
+                           FontSize="10"
+                           VerticalOptions="Center"/>
+                </StackLayout>
+            </Grid>
         </Border>
 
     </Grid>

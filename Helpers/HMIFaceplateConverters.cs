@@ -111,16 +111,24 @@ namespace FG_Scada_2025.Helpers
     }
 
     // Converter for horizontal bar width
+
     public class SensorValueToBarWidthConverter : IValueConverter
     {
         public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
+            System.Diagnostics.Debug.WriteLine($"📏 SensorValueToBarWidthConverter called with value: {value?.GetType().Name}");
+
             if (value is Sensor sensor)
             {
                 double maxWidth = 200; // Maximum bar width
                 float percentage = (sensor.CurrentValue.ProcessValue / sensor.Config.MaxValue);
-                return Math.Min(maxWidth, Math.Max(5, percentage * maxWidth));
+                double width = Math.Min(maxWidth, Math.Max(5, percentage * maxWidth));
+
+                System.Diagnostics.Debug.WriteLine($"📏 Sensor {sensor.Tag}: Value={sensor.CurrentValue.ProcessValue}, MaxValue={sensor.Config.MaxValue}, Percentage={percentage:F2}, Width={width}");
+                return width;
             }
+
+            System.Diagnostics.Debug.WriteLine($"📏 SensorValueToBarWidthConverter returning 5 (value not Sensor)");
             return 5;
         }
 

@@ -36,6 +36,8 @@
             <helpers:BoolToActiveTextConverter x:Key="BoolToActiveTextConverter" />
             <helpers:BoolToActiveColorConverter x:Key="BoolToActiveColorConverter" />
             <helpers:AlarmDurationConverter x:Key="AlarmDurationConverter" />
+            <helpers:BoolToMqttButtonTextConverter x:Key="BoolToMqttButtonTextConverter" />
+            <helpers:BoolToMqttButtonColorConverter x:Key="BoolToMqttButtonColorConverter" />
 
         </ResourceDictionary>
     </Application.Resources>

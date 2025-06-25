@@ -23,10 +23,27 @@ namespace FG_Scada_2025.Services
             _connectionManager.ConnectionStatusChanged += OnConnectionStatusChanged;
         }
 
+        // REMOVED AUTO-CONNECTION - Now only initializes without connecting
         public async Task InitializeAsync()
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine("✅ RealTimeDataService initialized - ready for manual connection");
+                // NO AUTO-CONNECT: Connection will be initiated manually from Romania Map page
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error initializing real-time data service: {ex.Message}");
+            }
+        }
+
+        // NEW: Manual connection method for Romania Map button
+        public async Task<bool> ConnectToMqttAsync()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("🔌 Attempting manual MQTT connection...");
+
                 // Connect to MQTT broker with predefined settings
                 var config = new MqttConnectionConfig
                 {
@@ -45,13 +62,38 @@ namespace FG_Scada_2025.Services
                 {
                     // Subscribe to auto-discovery
                     await _connectionManager.SubscribeToAllSitesAsync();
+                    System.Diagnostics.Debug.WriteLine("✅ Successfully connected to MQTT and subscribed to topics");
                 }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("❌ Failed to connect to MQTT");
+                }
+
+                return connected;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error initializing real-time data service: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error connecting to MQTT: {ex.Message}");
+                return false;
             }
         }
+
+        // NEW: Manual disconnection method
+        public async Task DisconnectFromMqttAsync()
+        {
+            try
+            {
+                await _connectionManager.DisconnectAsync();
+                System.Diagnostics.Debug.WriteLine("✅ Disconnected from MQTT");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error disconnecting from MQTT: {ex.Message}");
+            }
+        }
+
+        // NEW: Check if currently connected
+        public bool IsConnectedToMqtt => _connectionManager.IsConnected;
 
         private void OnSensorDataReceived(object? sender, SensorDataReceivedEventArgs e)
         {
@@ -184,14 +226,9 @@ namespace FG_Scada_2025.Services
             }
             return false;
         }
-
-        public async Task DisconnectAsync()
-        {
-            await _connectionManager.DisconnectAsync();
-        }
     }
 
-    // Supporting classes
+    // Supporting classes remain the same...
     public class SiteRealTimeInfo
     {
         public int SiteId { get; set; }
