@@ -16,7 +16,7 @@
 
         <!-- Header -->
         <Border Grid.Row="0" 
-                BackgroundColor="#2c3e50" 
+                BackgroundColor="#b11116" 
                 Padding="15,10">
             <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
                 <Button Grid.Column="0"

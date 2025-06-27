@@ -97,7 +97,7 @@
                         <Button Text="LOGIN"
                                 Command="{Binding LoginCommand}"
                                 IsEnabled="{Binding IsLoginEnabled}"
-                                BackgroundColor="#3498db"
+                                BackgroundColor="#b11116"
                                 TextColor="White"
                                 FontSize="16"
                                 FontAttributes="Bold"

@@ -10,7 +10,7 @@
 
         <!-- Header with MQTT Connection -->
         <Border Grid.Row="0" 
-                BackgroundColor="#2c3e50" 
+                BackgroundColor="#b11116" 
                 Padding="15,10">
             <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
 
@@ -22,7 +22,7 @@
                         TextColor="White"
                         FontSize="14"
                         HeightRequest="35"
-                        WidthRequest="80"
+                        WidthRequest="100"
                         CornerRadius="5"/>
 
                 <!-- Title -->
@@ -166,7 +166,7 @@
 
         <!-- Footer -->
         <Border Grid.Row="3" 
-                BackgroundColor="#34495e" 
+                BackgroundColor="#b11116" 
                 Padding="10">
             <Grid ColumnDefinitions="*,Auto">
                 <Label Grid.Column="0"

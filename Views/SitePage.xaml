@@ -8,7 +8,7 @@
 
         <!-- Header -->
         <Border Grid.Row="0" 
-                BackgroundColor="#2c3e50" 
+                BackgroundColor="#b11116" 
                 Padding="15,10">
             <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                 <Button Grid.Column="0"
@@ -40,7 +40,7 @@
                 <Button Grid.Column="2"
                         Text="Refresh"
                         Command="{Binding RefreshCommand}"
-                        BackgroundColor="#27ae60"
+                        BackgroundColor="#3498db"
                         TextColor="White"
                         FontSize="14"
                         HeightRequest="35"
@@ -157,7 +157,8 @@
                                    FontAttributes="Bold"/>
                             <Label Grid.Row="0" Grid.Column="1"
                                    Text="{Binding SiteId}"
-                                   FontSize="14"/>
+                                   FontSize="14"
+                                   />
 
                             <Label Grid.Row="1" Grid.Column="0"
                                    Text="Total Sensors:"
@@ -167,21 +168,7 @@
                                    Text="{Binding Site.Sensors.Count}"
                                    FontSize="14"/>
 
-                            <Label Grid.Row="2" Grid.Column="0"
-                                   Text="PLC Address:"
-                                   FontSize="14"
-                                   FontAttributes="Bold"/>
-                            <Label Grid.Row="2" Grid.Column="1"
-                                   Text="{Binding Site.PlcConnection.IpAddress}"
-                                   FontSize="14"/>
-
-                            <Label Grid.Row="3" Grid.Column="0"
-                                   Text="Protocol:"
-                                   FontSize="14"
-                                   FontAttributes="Bold"/>
-                            <Label Grid.Row="3" Grid.Column="1"
-                                   Text="{Binding Site.PlcConnection.Protocol}"
-                                   FontSize="14"/>
+                            
 
                         </Grid>
                     </StackLayout>
@@ -232,7 +219,7 @@
 
                         <!-- View Alarms Button -->
                         <Border Grid.Column="1"
-                                BackgroundColor="#e74c3c"
+                                BackgroundColor="#3498db"
                                 StrokeShape="RoundRectangle 15"
                                 Padding="0"
                                 HeightRequest="120">

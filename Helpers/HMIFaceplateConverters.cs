@@ -46,8 +46,8 @@ namespace FG_Scada_2025.Helpers
                 {
                     SensorStatus.LineOpenFault => Colors.Purple,
                     SensorStatus.LineShortFault => Colors.Purple,
-                    SensorStatus.DetectorError => Colors.Red,
-                    SensorStatus.DetectorDisabled => Colors.Gray,
+                    SensorStatus.DetectorError => Colors.Purple,
+                    SensorStatus.DetectorDisabled => Colors.Blue,
                     _ => Colors.Gray
                 };
             }
