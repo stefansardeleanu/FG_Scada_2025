@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace FG_Scada_2025.Models
+﻿namespace FG_Scada_2025.Models
 {
     public class User
     {
@@ -12,14 +6,26 @@ namespace FG_Scada_2025.Models
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
         public UserRole Role { get; set; }
-        public List<string> AllowedCounties { get; set; } = new List<string>();
-        public List<string> AllowedSites { get; set; } = new List<string>();
+
+        // Changed from county/site names to siteIDs for direct mapping
+        public List<int> AllowedSiteIDs { get; set; } = new List<int>();
+
+        // Helper method to check site access
+        public bool HasAccessToSite(int siteID)
+        {
+            // CEO has access to all sites
+            if (Role == UserRole.CEO)
+                return true;
+
+            // Others must be explicitly granted access
+            return AllowedSiteIDs.Contains(siteID);
+        }
     }
 
     public enum UserRole
     {
-        CEO,           // Can see all counties and sites
-        RegionalManager, // Can see specific counties
+        CEO,             // Can see all sites
+        RegionalManager, // Can see specific sites 
         PlantOperator    // Can see specific sites only
     }
 }

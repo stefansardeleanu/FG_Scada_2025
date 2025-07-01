@@ -22,6 +22,7 @@ public partial class SensorsPage : ContentPage
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
-        _viewModel.OnDisappearing();
+        // Clean up any resources if needed
+        // The ViewModel's finalizer will handle event unsubscription
     }
 }

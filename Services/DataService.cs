@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿// Services/DataService.cs - Debug version with enhanced logging
+using System.Collections.ObjectModel;
+using System.Text.Json;
 using FG_Scada_2025.Models;
 
 namespace FG_Scada_2025.Services
@@ -7,37 +9,141 @@ namespace FG_Scada_2025.Services
     {
         private List<County> _counties = new List<County>();
         private List<User> _users = new List<User>();
-        private Dictionary<string, Site> _sites = new Dictionary<string, Site>();
+        private Dictionary<int, Site> _discoveredSites = new Dictionary<int, Site>();
 
         public async Task InitializeAsync()
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("DataService.InitializeAsync called");
+                System.Diagnostics.Debug.WriteLine("🔄 DataService.InitializeAsync called");
                 await LoadCountiesAsync();
-                System.Diagnostics.Debug.WriteLine($"DataService.InitializeAsync completed. _counties.Count = {_counties.Count}");
-                await LoadSitesAsync();
-                LoadMockUsers();
-                System.Diagnostics.Debug.WriteLine("DataService.InitializeAsync fully completed");
+                await LoadUsersAsync();
+                System.Diagnostics.Debug.WriteLine($"✅ DataService.InitializeAsync completed. Users loaded: {_users.Count}");
+
+                // Debug: Print all loaded users
+                foreach (var user in _users)
+                {
+                    System.Diagnostics.Debug.WriteLine($"👤 User: {user.Username} | Role: {user.Role} | SiteIDs: [{string.Join(",", user.AllowedSiteIDs)}]");
+                }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"DataService.InitializeAsync error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"❌ DataService.InitializeAsync error: {ex.Message}");
             }
         }
 
-        #region County Data
+        #region User Management
+
+        private async Task LoadUsersAsync()
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("🔄 Loading users configuration...");
+
+                var usersConfigJson = await LoadJsonFileAsync("Users.json");
+                System.Diagnostics.Debug.WriteLine($"📄 Users.json content: {usersConfigJson}");
+
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var usersConfig = JsonSerializer.Deserialize<UsersConfig>(usersConfigJson, options);
+
+                if (usersConfig?.Users != null && usersConfig.Users.Any())
+                {
+                    _users = usersConfig.Users.Select(userConfig => new User
+                    {
+                        Id = userConfig.Id,
+                        Username = userConfig.Username,
+                        Password = userConfig.Password,
+                        Role = Enum.Parse<UserRole>(userConfig.Role),
+                        AllowedSiteIDs = userConfig.AllowedSiteIDs
+                    }).ToList();
+
+                    System.Diagnostics.Debug.WriteLine($"✅ Loaded {_users.Count} users from Users.json");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("⚠️ No users found in Users.json or file is empty, loading fallback users");
+                    LoadFallbackUsers();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ Error loading users: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine("⚠️ Loading fallback users due to error");
+                LoadFallbackUsers();
+            }
+        }
+
+        private void LoadFallbackUsers()
+        {
+            System.Diagnostics.Debug.WriteLine("🔄 Loading fallback hardcoded users...");
+
+            _users = new List<User>
+            {
+                new User
+                {
+                    Id = 1,
+                    Username = "admin",
+                    Password = "admin",
+                    Role = UserRole.CEO,
+                    AllowedSiteIDs = new List<int>() // CEO sees all
+                },
+                new User
+                {
+                    Id = 2,
+                    Username = "manager",
+                    Password = "manager",
+                    Role = UserRole.RegionalManager,
+                    AllowedSiteIDs = new List<int> { 5 }
+                },
+                new User
+                {
+                    Id = 3,
+                    Username = "operator",
+                    Password = "operator",
+                    Role = UserRole.PlantOperator,
+                    AllowedSiteIDs = new List<int> { 5 }
+                }
+            };
+
+            System.Diagnostics.Debug.WriteLine($"✅ Loaded {_users.Count} fallback users");
+        }
+
+        public User? ValidateUser(string username, string password)
+        {
+            System.Diagnostics.Debug.WriteLine($"🔍 Validating user: '{username}' with password: '{password}'");
+            System.Diagnostics.Debug.WriteLine($"📊 Available users: {_users.Count}");
+
+            foreach (var user in _users)
+            {
+                System.Diagnostics.Debug.WriteLine($"🔍 Checking: {user.Username} == {username} && {user.Password} == {password}");
+                if (user.Username == username && user.Password == password)
+                {
+                    System.Diagnostics.Debug.WriteLine($"✅ User validation successful: {user.Username} ({user.Role})");
+                    return user;
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine($"❌ User validation failed for: {username}");
+            return null;
+        }
+
+        public void SetCurrentUser(User user)
+        {
+            Preferences.Set("CurrentUserId", user.Id);
+            Preferences.Set("CurrentUserName", user.Username);
+            Preferences.Set("CurrentUserRole", user.Role.ToString());
+            System.Diagnostics.Debug.WriteLine($"💾 Stored current user: {user.Username} ({user.Role})");
+        }
+
+        #endregion
+
+        #region County & Site Configuration (No sensor data)
+
         public async Task<List<County>> GetCountiesAsync()
         {
             if (_counties.Count == 0)
             {
-                System.Diagnostics.Debug.WriteLine("_counties is empty, calling LoadCountiesAsync");
                 await LoadCountiesAsync();
-                System.Diagnostics.Debug.WriteLine($"After LoadCountiesAsync: _counties.Count = {_counties.Count}");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"_counties already has {_counties.Count} counties");
             }
             return _counties;
         }
@@ -52,217 +158,136 @@ namespace FG_Scada_2025.Services
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("DataService.LoadCountiesAsync starting...");
+                System.Diagnostics.Debug.WriteLine("🔄 Loading counties configuration...");
 
-                // Load main counties configuration
+                // Load main counties list
                 var countiesConfigJson = await LoadJsonFileAsync("CountiesConfig.json");
-                System.Diagnostics.Debug.WriteLine($"Loaded JSON: {countiesConfigJson.Length} characters");
-
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                };
-
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var countiesConfig = JsonSerializer.Deserialize<CountiesConfigRoot>(countiesConfigJson, options);
-                System.Diagnostics.Debug.WriteLine($"Deserialized: {countiesConfig?.Counties?.Count ?? 0} counties");
 
                 if (countiesConfig?.Counties != null)
                 {
                     _counties = countiesConfig.Counties;
-                    System.Diagnostics.Debug.WriteLine($"Assigned to _counties: {_counties.Count} counties");
 
-                    // Simple debug
-                    System.Diagnostics.Debug.WriteLine($"BEFORE LoadCountyDetails - County ROGJ has: {_counties.FirstOrDefault(c => c.Id == "ROGJ")?.Sites?.Count ?? 0} sites");
-                }
-
-                // Load detailed county data
-                foreach (var county in _counties)
-                {
-                    await LoadCountyDetailsAsync(county);
-                }
-
-                // Simple debug
-                System.Diagnostics.Debug.WriteLine($"AFTER LoadCountyDetails - County ROGJ has: {_counties.FirstOrDefault(c => c.Id == "ROGJ")?.Sites?.Count ?? 0} sites");
-
-                System.Diagnostics.Debug.WriteLine($"DataService.LoadCountiesAsync completed with {_counties.Count} counties");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error loading counties: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
-            }
-        }
-
-        private async Task LoadCountyDetailsAsync(County county)
-        {
-            try
-            {
-                System.Diagnostics.Debug.WriteLine($"Loading details for county: {county.Name}");
-
-                var countyDetailJson = await LoadJsonFileAsync($"Counties/{county.Name}.json");
-                System.Diagnostics.Debug.WriteLine($"Loaded county detail JSON: {countyDetailJson.Length} characters");
-
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                };
-
-                var countyDetail = JsonSerializer.Deserialize<CountyDetail>(countyDetailJson, options);
-
-                if (countyDetail?.Sites != null)
-                {
-                    county.Sites = countyDetail.Sites;
-                    System.Diagnostics.Debug.WriteLine($"Loaded {countyDetail.Sites.Count} sites for county {county.Name}");
-
-                    // Load detailed sensor data for each site
-                    foreach (var site in county.Sites)
+                    // Load sites for each county
+                    foreach (var county in _counties)
                     {
-                        await LoadDetailedSiteDataAsync(site);
+                        await LoadCountySitesAsync(county);
                     }
                 }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"No sites found in county detail for {county.Name}");
-                }
+
+                System.Diagnostics.Debug.WriteLine($"✅ Loaded {_counties.Count} counties");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading county details for {county.Name}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"❌ Error loading counties: {ex.Message}");
             }
         }
-        #endregion
 
-
-
-        private async Task LoadDetailedSiteDataAsync(Site site)
+        private async Task LoadCountySitesAsync(County county)
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"Loading detailed data for site: {site.Id}");
+                System.Diagnostics.Debug.WriteLine($"🔄 Loading sites for county: {county.Name}");
 
-                var siteJson = await LoadJsonFileAsync($"Sites/{site.Id}.json");
+                var countyConfigJson = await LoadJsonFileAsync($"Counties/{county.Name}.json");
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var countyConfig = JsonSerializer.Deserialize<CountyConfig>(countyConfigJson, options);
 
-                var options = new JsonSerializerOptions
+                if (countyConfig?.Sites != null)
                 {
-                    PropertyNameCaseInsensitive = true
-                };
+                    county.Sites = new List<Site>();
 
-                var siteDetail = JsonSerializer.Deserialize<SiteDetail>(siteJson, options);
+                    foreach (var siteConfig in countyConfig.Sites)
+                    {
+                        var site = new Site
+                        {
+                            SiteID = siteConfig.SiteID,
+                            DisplayName = siteConfig.DisplayName,
+                            CountyId = county.Id,
+                            Sensors = new ObservableCollection<Sensor>(), // Empty - will be populated by autodiscovery
+                            Status = new Models.SiteStatus() // Explicitly use Models.SiteStatus
+                        };
 
-                if (siteDetail?.Sensors != null)
-                {
-                    site.Sensors = siteDetail.Sensors;
-                    System.Diagnostics.Debug.WriteLine($"Loaded {siteDetail.Sensors.Count} sensors for site {site.Id}");
-                }
+                        county.Sites.Add(site);
 
-                // Update other site details if needed
-                if (siteDetail != null)
-                {
-                    site.PlcConnection = siteDetail.PlcConnection;
+                        // Also add to global discovered sites dictionary for MQTT mapping
+                        _discoveredSites[site.SiteID] = site;
+                    }
+
+                    System.Diagnostics.Debug.WriteLine($"✅ Loaded {countyConfig.Sites.Count} sites for county {county.Name}");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading detailed site data for {site.Id}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"❌ Error loading sites for county {county.Name}: {ex.Message}");
             }
         }
 
-        #region Site Data
+        #endregion
+
+        #region Site Discovery & MQTT Integration
+
+        public Site? GetSiteByID(int siteID)
+        {
+            return _discoveredSites.TryGetValue(siteID, out var site) ? site : null;
+        }
+
+        public List<Site> GetAllConfiguredSites()
+        {
+            return _discoveredSites.Values.ToList();
+        }
+
         public async Task<Site?> GetSiteAsync(string siteId)
         {
-            if (!_sites.ContainsKey(siteId))
-                await LoadSiteAsync(siteId);
+            // Convert string siteId to int for compatibility
+            if (int.TryParse(siteId, out int siteID))
+            {
+                return GetSiteByID(siteID);
+            }
 
-            return _sites.TryGetValue(siteId, out var site) ? site : null;
+            // Fallback: search by display name for backward compatibility
+            return _discoveredSites.Values.FirstOrDefault(s =>
+                s.DisplayName.Equals(siteId, StringComparison.OrdinalIgnoreCase));
         }
 
         public async Task<List<Site>> GetSitesForCountyAsync(string countyId)
         {
             var county = await GetCountyAsync(countyId);
-            var sites = county?.Sites ?? new List<Site>();
-            System.Diagnostics.Debug.WriteLine($"GetSitesForCountyAsync for {countyId}: returning {sites.Count} sites");
-            return sites;
+            return county?.Sites ?? new List<Site>();
         }
 
-        private async Task LoadSitesAsync()
-        {
-            // Pre-load known sites
-            await LoadSiteAsync("PanouHurezani");
-        }
-
-        private async Task LoadSiteAsync(string siteId)
-        {
-            try
-            {
-                var siteJson = await LoadJsonFileAsync($"Sites/{siteId}.json");
-
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                };
-
-                var siteDetail = JsonSerializer.Deserialize<SiteDetail>(siteJson, options);
-
-                if (siteDetail != null)
-                {
-                    var site = new Site
-                    {
-                        Id = siteDetail.SiteId,
-                        Name = siteDetail.Name,
-                        DisplayName = siteDetail.DisplayName,
-                        CountyId = siteDetail.CountyId,
-                        PlcConnection = siteDetail.PlcConnection,
-                        Sensors = siteDetail.Sensors ?? new List<Sensor>()
-                    };
-
-                    _sites[siteId] = site;
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error loading site {siteId}: {ex.Message}");
-            }
-        }
         #endregion
 
-        #region User Data
-        public User? ValidateUser(string username, string password)
-        {
-            return _users.FirstOrDefault(u => u.Username == username && u.Password == password);
-        }
+        #region User Access Control
 
         public List<County> GetAllowedCounties(User user)
         {
             if (user.Role == UserRole.CEO)
                 return _counties;
 
-            return _counties.Where(c => user.AllowedCounties.Contains(c.Id)).ToList();
+            // For other roles, return counties that contain sites the user has access to
+            var allowedCounties = new List<County>();
+            foreach (var county in _counties)
+            {
+                if (county.Sites.Any(site => user.HasAccessToSite(site.SiteID)))
+                {
+                    allowedCounties.Add(county);
+                }
+            }
+            return allowedCounties;
         }
 
         public List<Site> GetAllowedSites(User user)
         {
-            var allowedSites = new List<Site>();
-
             if (user.Role == UserRole.CEO)
             {
-                foreach (var county in _counties)
-                    allowedSites.AddRange(county.Sites);
-            }
-            else if (user.Role == UserRole.RegionalManager)
-            {
-                var allowedCounties = GetAllowedCounties(user);
-                foreach (var county in allowedCounties)
-                    allowedSites.AddRange(county.Sites);
-            }
-            else if (user.Role == UserRole.PlantOperator)
-            {
-                foreach (var county in _counties)
-                {
-                    allowedSites.AddRange(county.Sites.Where(s => user.AllowedSites.Contains(s.Id)));
-                }
+                return GetAllConfiguredSites();
             }
 
-            return allowedSites;
+            return GetAllConfiguredSites()
+                .Where(site => user.HasAccessToSite(site.SiteID))
+                .ToList();
         }
 
         public User? GetCurrentUser()
@@ -272,23 +297,13 @@ namespace FG_Scada_2025.Services
                 var userId = Preferences.Get("CurrentUserId", -1);
                 if (userId == -1) return null;
 
-                var username = Preferences.Get("CurrentUserName", string.Empty);
-                var roleString = Preferences.Get("CurrentUserRole", string.Empty);
-
-                if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(roleString))
-                    return null;
-
-                if (Enum.TryParse<UserRole>(roleString, out var role))
-                {
-                    return _users.FirstOrDefault(u => u.Id == userId && u.Username == username);
-                }
+                return _users.FirstOrDefault(u => u.Id == userId);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error getting current user: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"❌ Error getting current user: {ex.Message}");
+                return null;
             }
-
-            return null;
         }
 
         public void ClearCurrentUser()
@@ -298,84 +313,28 @@ namespace FG_Scada_2025.Services
             Preferences.Remove("CurrentUserRole");
         }
 
-        private void LoadMockUsers()
-        {
-            _users = new List<User>
-            {
-                new User
-                {
-                    Id = 1,
-                    Username = "admin",
-                    Password = "admin",
-                    Role = UserRole.CEO,
-                    AllowedCounties = new List<string>(), // CEO sees all
-                    AllowedSites = new List<string>()     // CEO sees all
-                },
-                new User
-                {
-                    Id = 2,
-                    Username = "manager",
-                    Password = "manager",
-                    Role = UserRole.RegionalManager,
-                    AllowedCounties = new List<string> { "ROGJ" },
-                    AllowedSites = new List<string>()
-                },
-                new User
-                {
-                    Id = 3,
-                    Username = "operator",
-                    Password = "operator",
-                    Role = UserRole.PlantOperator,
-                    AllowedCounties = new List<string>(),
-                    AllowedSites = new List<string> { "PanouHurezani" }
-                }
-            };
-        }
         #endregion
 
         #region Helper Methods
+
         private async Task<string> LoadJsonFileAsync(string fileName)
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"Attempting to load file: Data/{fileName}");
+                System.Diagnostics.Debug.WriteLine($"🔄 Loading file: Data/{fileName}");
                 using var stream = await FileSystem.OpenAppPackageFileAsync($"Data/{fileName}");
                 using var reader = new StreamReader(stream);
                 var content = await reader.ReadToEndAsync();
-                System.Diagnostics.Debug.WriteLine($"Successfully loaded {fileName}: {content.Length} characters");
+                System.Diagnostics.Debug.WriteLine($"✅ File loaded: {fileName} ({content.Length} chars)");
                 return content;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading {fileName}: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"❌ Error loading {fileName}: {ex.Message}");
                 return "{}";
             }
         }
+
         #endregion
-    }
-
-    // Helper classes for JSON deserialization
-    public class CountiesConfigRoot
-    {
-        public List<County> Counties { get; set; } = new List<County>();
-    }
-
-    public class CountyDetail
-    {
-        public string CountyId { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string DisplayName { get; set; } = string.Empty;
-        public string MapFilePath { get; set; } = string.Empty;
-        public List<Site> Sites { get; set; } = new List<Site>();
-    }
-
-    public class SiteDetail
-    {
-        public string SiteId { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string DisplayName { get; set; } = string.Empty;
-        public string CountyId { get; set; } = string.Empty;
-        public PLCConnection PlcConnection { get; set; } = new PLCConnection();
-        public List<Sensor> Sensors { get; set; } = new List<Sensor>();
     }
 }

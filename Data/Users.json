@@ -1,0 +1,28 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password": "admin",
+      "role": "CEO",
+      "allowedSiteIDs": [],
+      "comment": "CEO has access to all sites"
+    },
+    {
+      "id": 2,
+      "username": "manager",
+      "password": "manager",
+      "role": "RegionalManager",
+      "allowedSiteIDs": [ 5 ],
+      "comment": "Regional manager for Gorj county"
+    },
+    {
+      "id": 3,
+      "username": "operator",
+      "password": "operator",
+      "role": "PlantOperator",
+      "allowedSiteIDs": [ 5 ],
+      "comment": "Operator for Panou Hurezani only"
+    }
+  ]
+}

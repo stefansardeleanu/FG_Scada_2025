@@ -5,7 +5,12 @@
         public AppShell()
         {
             InitializeComponent();
-            Routing.RegisterRoute("CountyPage", typeof(Views.CountyPage));
+            RegisterRoutes();
+        }
+
+        private void RegisterRoutes()
+        {
+            // FIXED: Removed duplicate CountyPage registration
             Routing.RegisterRoute("CountyPage", typeof(Views.CountyPage));
             Routing.RegisterRoute("SitePage", typeof(Views.SitePage));
             Routing.RegisterRoute("SensorsPage", typeof(Views.SensorsPage));
@@ -13,5 +18,4 @@
             Routing.RegisterRoute("ConnectionTestPage", typeof(Views.ConnectionTestPage));
         }
     }
-
 }

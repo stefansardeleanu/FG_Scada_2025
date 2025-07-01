@@ -1,5 +1,5 @@
 ﻿<?xml version = "1.0" encoding = "UTF-8" ?>
-<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<Application  xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:FG_Scada_2025"
              xmlns:helpers="clr-namespace:FG_Scada_2025.Helpers"
@@ -11,7 +11,7 @@
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Value Converters -->
+            <!-- Existing Value Converters -->
             <helpers:StringToBoolConverter x:Key="StringToBoolConverter" />
             <helpers:SiteStatusToColorConverter x:Key="SiteStatusToColorConverter" />
             <helpers:SiteStatusToTextConverter x:Key="SiteStatusToTextConverter" />
@@ -29,15 +29,14 @@
             <helpers:StatusToFaultColorConverter x:Key="StatusToFaultColorConverter" />
             <helpers:SensorTypeToColorConverter x:Key="SensorTypeToColorConverter" />
             <helpers:SensorTypeToLetterConverter x:Key="SensorTypeToLetterConverter" />
-            <helpers:SensorValueToBarWidthConverter x:Key="SensorValueToBarWidthConverter" />
-            <helpers:AlarmPriorityToColorConverter x:Key="AlarmPriorityToColorConverter" />
-            <helpers:AlarmTypeToTextConverter x:Key="AlarmTypeToTextConverter" />
-            <helpers:AlarmTypeToColorConverter x:Key="AlarmTypeToColorConverter" />
-            <helpers:BoolToActiveTextConverter x:Key="BoolToActiveTextConverter" />
-            <helpers:BoolToActiveColorConverter x:Key="BoolToActiveColorConverter" />
-            <helpers:AlarmDurationConverter x:Key="AlarmDurationConverter" />
-            <helpers:BoolToMqttButtonTextConverter x:Key="BoolToMqttButtonTextConverter" />
-            <helpers:BoolToMqttButtonColorConverter x:Key="BoolToMqttButtonColorConverter" />
+
+            <!-- NEW: Enhanced Sensor Status Converters for Disabled Indication -->
+            <helpers:SensorStatusToColorConverter x:Key="SensorStatusToColorConverter" />
+            <helpers:SensorStatusToBackgroundColorConverter x:Key="SensorStatusToBackgroundColorConverter" />
+            <helpers:SensorStatusToTextConverter x:Key="SensorStatusToTextConverter" />
+            <helpers:SensorStatusToIconConverter x:Key="SensorStatusToIconConverter" />
+            <helpers:SensorStatusToOpacityConverter x:Key="SensorStatusToOpacityConverter" />
+            <helpers:SensorStatusToDisabledConverter x:Key="SensorStatusToDisabledConverter" />
 
         </ResourceDictionary>
     </Application.Resources>

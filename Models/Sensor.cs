@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace FG_Scada_2025.Models
@@ -93,6 +92,18 @@ namespace FG_Scada_2025.Models
         FlowSensor
     }
 
+    // CORRECTED: SensorStatus enum to match your MQTT status values
+    public enum SensorStatus
+    {
+        Normal = 0,              // Status 0: Normal operation
+        AlarmLevel1 = 1,         // Status 1: Warning/Alarm Level 1
+        AlarmLevel2 = 2,         // Status 2: Alarm Level 2
+        DetectorError = 3,       // Status 3: Detector error
+        DetectorDisabled = 4,    // Status 4: Detector disabled
+        LineOpenFault = 5,       // Status 5: Line open fault
+        LineShortFault = 6       // Status 6: Line short fault
+    }
+
     public class SensorValue : INotifyPropertyChanged
     {
         private float _processValue;
@@ -144,17 +155,6 @@ namespace FG_Scada_2025.Models
         }
 
         #endregion
-    }
-
-    public enum SensorStatus
-    {
-        Normal,
-        AlarmLevel1,
-        AlarmLevel2,
-        LineOpenFault,
-        LineShortFault,
-        DetectorError,
-        DetectorDisabled
     }
 
     public class SensorAlarms : INotifyPropertyChanged

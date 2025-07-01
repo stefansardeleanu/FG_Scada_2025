@@ -1,20 +1,76 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace FG_Scada_2025.Models
 {
-    public class County
+    public class County : INotifyPropertyChanged
     {
-        public string Id { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string DisplayName { get; set; } = string.Empty;
-        public string SvgPath { get; set; } = string.Empty;
-        public string MapFilePath { get; set; } = string.Empty;
-        public List<Site> Sites { get; set; } = new List<Site>();
-        public CountyPosition Position { get; set; } = new CountyPosition();
+        private string _id = string.Empty;
+        private string _name = string.Empty;
+        private string _displayName = string.Empty;
+        private string _svgPath = string.Empty;
+        private string _mapFilePath = string.Empty;
+        private CountyPosition _position = new();
+        private List<Site> _sites = new();
+
+        public string Id
+        {
+            get => _id;
+            set => SetProperty(ref _id, value);
+        }
+
+        public string Name
+        {
+            get => _name;
+            set => SetProperty(ref _name, value);
+        }
+
+        public string DisplayName
+        {
+            get => _displayName;
+            set => SetProperty(ref _displayName, value);
+        }
+
+        public string SvgPath
+        {
+            get => _svgPath;
+            set => SetProperty(ref _svgPath, value);
+        }
+
+        public string MapFilePath
+        {
+            get => _mapFilePath;
+            set => SetProperty(ref _mapFilePath, value);
+        }
+
+        public CountyPosition Position
+        {
+            get => _position;
+            set => SetProperty(ref _position, value);
+        }
+
+        public List<Site> Sites
+        {
+            get => _sites;
+            set => SetProperty(ref _sites, value);
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        protected bool SetProperty<T>(ref T backingStore, T value, [CallerMemberName] string? propertyName = null)
+        {
+            if (EqualityComparer<T>.Default.Equals(backingStore, value))
+                return false;
+
+            backingStore = value;
+            OnPropertyChanged(propertyName);
+            return true;
+        }
     }
 
     public class CountyPosition

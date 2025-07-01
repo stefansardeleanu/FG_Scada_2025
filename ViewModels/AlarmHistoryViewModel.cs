@@ -2,7 +2,6 @@
 using System.Windows.Input;
 using FG_Scada_2025.Models;
 using FG_Scada_2025.Services;
-using FG_Scada_2025.Helpers;
 
 namespace FG_Scada_2025.ViewModels
 {
@@ -23,6 +22,7 @@ namespace FG_Scada_2025.ViewModels
         private AlarmType? _selectedAlarmType;
         private bool _showActiveOnly = false;
         private string _alarmSummary = string.Empty;
+        private AlarmTypeItem _selectedAlarmTypeItem;
 
         public AlarmHistoryViewModel(DataService dataService, NavigationService navigationService)
         {
@@ -43,11 +43,14 @@ namespace FG_Scada_2025.ViewModels
                 new AlarmTypeItem { Name = "Line Open Fault", Type = AlarmType.LineOpenFault },
                 new AlarmTypeItem { Name = "Line Short Fault", Type = AlarmType.LineShortFault },
                 new AlarmTypeItem { Name = "Detector Error", Type = AlarmType.DetectorError },
+                new AlarmTypeItem { Name = "Detector Disabled", Type = AlarmType.DetectorDisabled },
                 new AlarmTypeItem { Name = "Communication Loss", Type = AlarmType.CommunicationLoss }
             };
 
-            SelectedAlarmTypeItem = AlarmTypes[0]; // Default to "All Types"
+            _selectedAlarmTypeItem = AlarmTypes[0]; // Default to "All Types"
         }
+
+        #region Properties
 
         public string SiteId
         {
@@ -121,7 +124,6 @@ namespace FG_Scada_2025.ViewModels
 
         public List<AlarmTypeItem> AlarmTypes { get; }
 
-        private AlarmTypeItem _selectedAlarmTypeItem;
         public AlarmTypeItem SelectedAlarmTypeItem
         {
             get => _selectedAlarmTypeItem;
@@ -137,6 +139,10 @@ namespace FG_Scada_2025.ViewModels
         public ICommand SearchCommand { get; }
         public ICommand ClearFiltersCommand { get; }
 
+        #endregion
+
+        #region Initialization
+
         public async Task InitializeAsync()
         {
             if (IsBusy) return;
@@ -148,7 +154,7 @@ namespace FG_Scada_2025.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error initializing alarms: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error initializing alarm history: {ex.Message}");
             }
             finally
             {
@@ -156,66 +162,64 @@ namespace FG_Scada_2025.ViewModels
             }
         }
 
+        #endregion
+
+        #region Data Loading
+
         private async Task LoadAlarmsAsync()
         {
             try
             {
-                if (string.IsNullOrEmpty(SiteId))
-                {
-                    System.Diagnostics.Debug.WriteLine("SiteId is empty");
-                    return;
-                }
+                // Generate mock alarm data for now
+                // In a real implementation, this would load from your database
+                var mockAlarms = GenerateMockAlarms();
 
-                // Generate mock alarm history data
-                var mockAlarms = GenerateMockAlarmHistory();
-
-                // Update alarms collection
                 Alarms.Clear();
                 foreach (var alarm in mockAlarms.OrderByDescending(a => a.StartTime))
                 {
                     Alarms.Add(alarm);
                 }
 
-                // Apply current filters
                 FilterAlarms();
-
-                System.Diagnostics.Debug.WriteLine($"Loaded {Alarms.Count} alarms for site {SiteId}");
+                UpdateAlarmSummary();
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"LoadAlarmsAsync error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error loading alarms: {ex.Message}");
             }
         }
 
-        private List<Alarm> GenerateMockAlarmHistory()
+        private List<Alarm> GenerateMockAlarms()
         {
-            var alarms = new List<Alarm>();
             var random = new Random();
-            var sensorIds = new[] { "GD001", "GD002", "GD003", "TS001" };
-            var alarmTypes = Enum.GetValues<AlarmType>();
+            var alarms = new List<Alarm>();
+            var now = DateTime.Now;
 
-            // Generate 30 days of alarm history
-            var startDate = DateTime.Now.AddDays(-30);
-
-            for (int i = 0; i < 50; i++) // Generate 50 mock alarms
+            // Generate 50 mock alarms
+            for (int i = 0; i < 50; i++)
             {
-                var sensorId = sensorIds[random.Next(sensorIds.Length)];
-                var alarmType = alarmTypes[random.Next(alarmTypes.Length)];
-                var startTime = startDate.AddHours(random.Next(24 * 30)); // Random time in last 30 days
-                var isActive = random.Next(10) < 2; // 20% chance of being active
+                var startTime = now.AddDays(-random.Next(0, 30)).AddHours(-random.Next(0, 24));
+                var isActive = random.Next(10) < 3; // 30% chance of being active
 
                 var alarm = new Alarm
                 {
                     Id = i + 1,
-                    SensorId = sensorId,
                     SiteId = SiteId,
-                    Type = alarmType,
-                    Message = GenerateAlarmMessage(sensorId, alarmType),
+                    SensorId = $"CH{random.Next(40, 50)}",
+                    SensorTag = $"KGD-{random.Next(1, 20):D3}",
+                    SensorName = $"Gas Detector {random.Next(1, 20)}",
+                    Type = GetRandomAlarmType(random),
+                    Severity = GetRandomAlarmSeverity(random),
+                    Priority = GetRandomAlarmPriority(random),
+                    Message = GetAlarmMessage(i),
                     Value = (float)(random.NextDouble() * 100),
+                    Unit = random.Next(2) == 0 ? "%LEL" : "PPM",
+                    Timestamp = startTime,
                     StartTime = startTime,
-                    EndTime = isActive ? null : startTime.AddMinutes(random.Next(5, 120)), // 5 min to 2 hours duration
+                    EndTime = isActive ? null : startTime.AddMinutes(random.Next(5, 120)),
                     IsActive = isActive,
-                    Priority = GetAlarmPriority(alarmType)
+                    AcknowledgedAt = random.Next(10) < 7 ? startTime.AddMinutes(random.Next(1, 30)) : null,
+                    AcknowledgedBy = random.Next(10) < 7 ? $"User{random.Next(1, 5)}" : null
                 };
 
                 alarms.Add(alarm);
@@ -224,35 +228,46 @@ namespace FG_Scada_2025.ViewModels
             return alarms;
         }
 
-        private string GenerateAlarmMessage(string sensorId, AlarmType type)
+        private AlarmType GetRandomAlarmType(Random random)
         {
-            return type switch
-            {
-                AlarmType.AlarmLevel1 => $"{sensorId}: Low level alarm triggered",
-                AlarmType.AlarmLevel2 => $"{sensorId}: High level alarm triggered",
-                AlarmType.LineOpenFault => $"{sensorId}: Line open fault detected",
-                AlarmType.LineShortFault => $"{sensorId}: Line short fault detected",
-                AlarmType.DetectorError => $"{sensorId}: Detector malfunction",
-                AlarmType.DetectorDisabled => $"{sensorId}: Detector disabled",
-                AlarmType.CommunicationLoss => $"{sensorId}: Communication timeout",
-                _ => $"{sensorId}: Unknown alarm condition"
-            };
+            var types = Enum.GetValues<AlarmType>();
+            return types[random.Next(types.Length)];
         }
 
-        private AlarmPriority GetAlarmPriority(AlarmType type)
+        private AlarmSeverity GetRandomAlarmSeverity(Random random)
         {
-            return type switch
-            {
-                AlarmType.AlarmLevel2 => AlarmPriority.Critical,
-                AlarmType.DetectorError => AlarmPriority.High,
-                AlarmType.LineOpenFault => AlarmPriority.High,
-                AlarmType.LineShortFault => AlarmPriority.High,
-                AlarmType.AlarmLevel1 => AlarmPriority.Medium,
-                AlarmType.CommunicationLoss => AlarmPriority.Medium,
-                AlarmType.DetectorDisabled => AlarmPriority.Low,
-                _ => AlarmPriority.Low
-            };
+            var severities = Enum.GetValues<AlarmSeverity>();
+            return severities[random.Next(severities.Length)];
         }
+
+        private AlarmPriority GetRandomAlarmPriority(Random random)
+        {
+            var priorities = Enum.GetValues<AlarmPriority>();
+            return priorities[random.Next(priorities.Length)];
+        }
+
+        private string GetAlarmMessage(int index)
+        {
+            var messages = new[]
+            {
+                "Gas concentration above alarm level",
+                "Detector communication failure",
+                "Line open fault detected",
+                "Line short circuit fault",
+                "Detector requires calibration",
+                "High gas concentration detected",
+                "Detector disabled by user",
+                "Communication timeout",
+                "Sensor reading out of range",
+                "Maintenance required"
+            };
+
+            return messages[index % messages.Length];
+        }
+
+        #endregion
+
+        #region Filtering
 
         private void FilterAlarms()
         {
@@ -261,11 +276,13 @@ namespace FG_Scada_2025.ViewModels
                 var filtered = Alarms.AsEnumerable();
 
                 // Filter by search text
-                if (!string.IsNullOrWhiteSpace(SearchText))
+                if (!string.IsNullOrEmpty(SearchText))
                 {
+                    var searchLower = SearchText.ToLower();
                     filtered = filtered.Where(a =>
-                        a.Message.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                        a.SensorId.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+                        a.SensorTag.ToLower().Contains(searchLower) ||
+                        a.SensorName.ToLower().Contains(searchLower) ||
+                        a.Message.ToLower().Contains(searchLower));
                 }
 
                 // Filter by alarm type
@@ -280,44 +297,36 @@ namespace FG_Scada_2025.ViewModels
                     filtered = filtered.Where(a => a.IsActive);
                 }
 
-                // Update filtered collection
                 FilteredAlarms.Clear();
                 foreach (var alarm in filtered.OrderByDescending(a => a.StartTime))
                 {
                     FilteredAlarms.Add(alarm);
                 }
 
-                // Update summary
                 UpdateAlarmSummary();
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"FilterAlarms error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error filtering alarms: {ex.Message}");
             }
+        }
+
+        private void ClearFilters()
+        {
+            SearchText = string.Empty;
+            SelectedAlarmTypeItem = AlarmTypes[0];
+            ShowActiveOnly = false;
         }
 
         private void UpdateAlarmSummary()
         {
             var total = FilteredAlarms.Count;
             var active = FilteredAlarms.Count(a => a.IsActive);
-            var critical = FilteredAlarms.Count(a => a.Priority == AlarmPriority.Critical);
-            var high = FilteredAlarms.Count(a => a.Priority == AlarmPriority.High);
+            var acknowledged = FilteredAlarms.Count(a => a.AcknowledgedAt.HasValue);
 
-            AlarmSummary = $"Total: {total} | Active: {active} | Critical: {critical} | High: {high}";
+            AlarmSummary = $"Total: {total} | Active: {active} | Acknowledged: {acknowledged}";
         }
 
-        private void ClearFilters()
-        {
-            SearchText = string.Empty;
-            SelectedAlarmTypeItem = AlarmTypes[0]; // Reset to "All Types"
-            ShowActiveOnly = false;
-        }
-    }
-
-    // Helper class for alarm type picker
-    public class AlarmTypeItem
-    {
-        public string Name { get; set; } = string.Empty;
-        public AlarmType? Type { get; set; }
+        #endregion
     }
 }

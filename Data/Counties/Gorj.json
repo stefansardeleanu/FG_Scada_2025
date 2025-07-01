@@ -4,9 +4,7 @@
   "displayName": "Gorj County",
   "sites": [
     {
-      "id": "PanouHurezani",
       "siteID": 5,
-      "name": "PanouHurezani",
       "displayName": "Panou Hurezani Station"
     }
   ]
